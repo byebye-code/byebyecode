@@ -39,3 +39,10 @@ which = "6.0"
 default = ["tui", "self-update", "dirs"]
 tui = ["ratatui", "crossterm", "ansi_term", "ansi-to-tui", "chrono"]
 self-update = ["ureq", "semver", "chrono", "dirs"]
+
+[profile.release]
+strip = true           # 移除调试符号，能减少约 2-3MB
+lto = true            # 链接时优化，减少重复代码
+codegen-units = 1     # 更好的优化，略微增加编译时间
+opt-level = "z"       # 优化文件大小（或用 "s"）
+panic = "abort"       # 移除 panic 展开代码

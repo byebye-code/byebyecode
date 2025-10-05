@@ -184,18 +184,18 @@ impl PreviewComponent {
                     },
                 },
                 SegmentId::ByeByeCodeUsage => SegmentData {
-                    primary: "62.5% (500 MB)".to_string(),
-                    secondary: "".to_string(),
+                    primary: "$9.05/$20".to_string(),
+                    secondary: "剩$10.94".to_string(),
                     metadata: {
                         let mut map = HashMap::new();
-                        map.insert("used".to_string(), "625000000".to_string());
-                        map.insert("total".to_string(), "1000000000".to_string());
-                        map.insert("remaining".to_string(), "375000000".to_string());
+                        map.insert("used".to_string(), "9.05".to_string());
+                        map.insert("total".to_string(), "20.00".to_string());
+                        map.insert("remaining".to_string(), "10.94".to_string());
                         map
                     },
                 },
                 SegmentId::ByeByeCodeSubscription => SegmentData {
-                    primary: "Pro (Active)".to_string(),
+                    primary: "\x1b[38;5;46m88code正持续为您服务\x1b[0m".to_string(),
                     secondary: "".to_string(),
                     metadata: {
                         let mut map = HashMap::new();

@@ -162,3 +162,47 @@ pub fn usage_segment() -> SegmentConfig {
         },
     }
 }
+
+pub fn byebyecode_usage_segment() -> SegmentConfig {
+    SegmentConfig {
+        id: SegmentId::ByeByeCodeUsage,
+        enabled: false,
+        icon: IconConfig {
+            plain: "88code".to_string(),
+            nerd_font: "\u{f0690}".to_string(), // nf-md-gauge
+        },
+        colors: ColorConfig {
+            icon: Some(AnsiColor::Color256 { c256: 214 }), // Orange
+            text: Some(AnsiColor::Color256 { c256: 255 }), // White
+            background: None,
+        },
+        styles: TextStyleConfig { text_bold: false },
+        options: {
+            let mut opts = HashMap::new();
+            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts
+        },
+    }
+}
+
+pub fn byebyecode_subscription_segment() -> SegmentConfig {
+    SegmentConfig {
+        id: SegmentId::ByeByeCodeSubscription,
+        enabled: false,
+        icon: IconConfig {
+            plain: "订阅".to_string(),
+            nerd_font: "\u{f0e21}".to_string(), // nf-md-crown
+        },
+        colors: ColorConfig {
+            icon: Some(AnsiColor::Color256 { c256: 39 }), // Blue
+            text: Some(AnsiColor::Color256 { c256: 255 }), // White
+            background: None,
+        },
+        styles: TextStyleConfig { text_bold: false },
+        options: {
+            let mut opts = HashMap::new();
+            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts
+        },
+    }
+}

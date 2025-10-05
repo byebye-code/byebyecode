@@ -162,3 +162,65 @@ pub fn output_style_segment() -> SegmentConfig {
         options: HashMap::new(),
     }
 }
+
+pub fn byebyecode_usage_segment() -> SegmentConfig {
+    SegmentConfig {
+        id: SegmentId::ByeByeCodeUsage,
+        enabled: true,
+        icon: IconConfig {
+            plain: "88code".to_string(),
+            nerd_font: "\u{f0b7f}".to_string(), // nf-md-lightning_bolt
+        },
+        colors: ColorConfig {
+            icon: Some(AnsiColor::Color256 { c256: 214 }), // Orange
+            text: Some(AnsiColor::Color256 { c256: 255 }), // White
+            background: None,
+        },
+        styles: TextStyleConfig::default(),
+        options: {
+            let mut opts = HashMap::new();
+            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts
+        },
+    }
+}
+
+pub fn byebyecode_subscription_segment() -> SegmentConfig {
+    SegmentConfig {
+        id: SegmentId::ByeByeCodeSubscription,
+        enabled: true,
+        icon: IconConfig {
+            plain: "订阅".to_string(),
+            nerd_font: "\u{f0e21}".to_string(), // nf-md-crown
+        },
+        colors: ColorConfig {
+            icon: Some(AnsiColor::Color256 { c256: 39 }), // Blue
+            text: Some(AnsiColor::Color256 { c256: 255 }), // White
+            background: None,
+        },
+        styles: TextStyleConfig::default(),
+        options: {
+            let mut opts = HashMap::new();
+            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts
+        },
+    }
+}
+
+pub fn byebyecode_status_segment() -> SegmentConfig {
+    SegmentConfig {
+        id: SegmentId::ByeByeCodeStatus,
+        enabled: true, // 默认启用
+        icon: IconConfig {
+            plain: "".to_string(), // 无图标,直接显示文字
+            nerd_font: "".to_string(),
+        },
+        colors: ColorConfig {
+            icon: None,
+            text: None, // 颜色由segment自己控制(水波纹效果)
+            background: None,
+        },
+        styles: TextStyleConfig::default(),
+        options: HashMap::new(),
+    }
+}

@@ -1,14 +1,18 @@
 [package]
-name = "ccometixline"
-version = "1.0.7"
+name = "byebyecode"
+version = "0.1.0"
 edition = "2021"
-description = "CCometixLine (ccline) - High-performance Claude Code StatusLine tool written in Rust"
-authors = ["Haleclipse"]
+description = "byebyecode - Claude Code Wrapper with Translation, Usage Tracking and Enhanced Features"
+authors = ["byebyecode Team"]
 license = "MIT"
-repository = "https://github.com/username/CCometixLine"
+repository = "https://github.com/byebyecode/byebyecode"
 readme = "README.md"
-keywords = ["claude", "statusline", "powerline", "rust", "claude-code"]
+keywords = ["claude", "statusline", "translation", "byebyecode", "claude-code"]
 categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "byebyecode"
+path = "src/main.rs"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -27,8 +31,9 @@ semver = { version = "1.0", optional = true }
 chrono = { version = "0.4", features = ["serde"], optional = true }
 dirs = { version = "5.0", optional = true }
 regex = "1.0"
-
-
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+base64 = "0.21"
+which = "6.0"
 
 [features]
 default = ["tui", "self-update", "dirs"]

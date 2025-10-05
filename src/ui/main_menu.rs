@@ -100,11 +100,11 @@ impl MainMenu {
 
     fn get_menu_items(&self) -> Vec<(&str, &str)> {
         vec![
-            (" Configuration Mode", "Enter TUI configuration interface"),
-            (" Initialize Config", "Create default configuration"),
-            (" Check Configuration", "Validate configuration file"),
-            (" About", "Show application information"),
-            (" Exit", "Exit CCometixLine"),
+            (" 配置模式", "进入 TUI 配置界面"),
+            (" 初始化配置", "创建默认配置文件"),
+            (" 检查配置", "验证配置文件"),
+            (" 关于", "显示应用程序信息"),
+            (" 退出", "退出 CCometixLine"),
         ]
     }
 

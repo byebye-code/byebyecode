@@ -50,12 +50,12 @@ impl ThemePresets {
         Ok(config)
     }
 
-    /// Get the themes directory path (~/.claude/ccline/themes/)
+    /// Get the themes directory path (~/.claude/88code/themes/)
     fn get_themes_path() -> std::path::PathBuf {
         if let Some(home) = dirs::home_dir() {
-            home.join(".claude").join("ccline").join("themes")
+            home.join(".claude/88code").join("themes")
         } else {
-            std::path::PathBuf::from(".claude/ccline/themes")
+            std::path::PathBuf::from(".claude/88code/themes")
         }
     }
 
@@ -137,6 +137,8 @@ impl ThemePresets {
                 theme_cometix::cost_segment(),
                 theme_cometix::session_segment(),
                 theme_cometix::output_style_segment(),
+                theme_cometix::byebyecode_usage_segment(),
+                theme_cometix::byebyecode_subscription_segment(),
             ],
             theme: "cometix".to_string(),
         }
@@ -157,6 +159,9 @@ impl ThemePresets {
                 theme_default::cost_segment(),
                 theme_default::session_segment(),
                 theme_default::output_style_segment(),
+                theme_default::byebyecode_usage_segment(),
+                theme_default::byebyecode_subscription_segment(),
+                theme_default::byebyecode_status_segment(),
             ],
             theme: "default".to_string(),
         }
@@ -177,6 +182,8 @@ impl ThemePresets {
                 theme_minimal::cost_segment(),
                 theme_minimal::session_segment(),
                 theme_minimal::output_style_segment(),
+                theme_minimal::byebyecode_usage_segment(),
+                theme_minimal::byebyecode_subscription_segment(),
             ],
             theme: "minimal".to_string(),
         }
@@ -197,6 +204,8 @@ impl ThemePresets {
                 theme_gruvbox::cost_segment(),
                 theme_gruvbox::session_segment(),
                 theme_gruvbox::output_style_segment(),
+                theme_gruvbox::byebyecode_usage_segment(),
+                theme_gruvbox::byebyecode_subscription_segment(),
             ],
             theme: "gruvbox".to_string(),
         }
@@ -217,6 +226,8 @@ impl ThemePresets {
                 theme_nord::cost_segment(),
                 theme_nord::session_segment(),
                 theme_nord::output_style_segment(),
+                theme_nord::byebyecode_usage_segment(),
+                theme_nord::byebyecode_subscription_segment(),
             ],
             theme: "nord".to_string(),
         }
@@ -237,6 +248,8 @@ impl ThemePresets {
                 theme_powerline_dark::cost_segment(),
                 theme_powerline_dark::session_segment(),
                 theme_powerline_dark::output_style_segment(),
+                theme_powerline_dark::byebyecode_usage_segment(),
+                theme_powerline_dark::byebyecode_subscription_segment(),
             ],
             theme: "powerline-dark".to_string(),
         }
@@ -257,6 +270,8 @@ impl ThemePresets {
                 theme_powerline_light::cost_segment(),
                 theme_powerline_light::session_segment(),
                 theme_powerline_light::output_style_segment(),
+                theme_powerline_light::byebyecode_usage_segment(),
+                theme_powerline_light::byebyecode_subscription_segment(),
             ],
             theme: "powerline-light".to_string(),
         }
@@ -277,6 +292,8 @@ impl ThemePresets {
                 theme_powerline_rose_pine::cost_segment(),
                 theme_powerline_rose_pine::session_segment(),
                 theme_powerline_rose_pine::output_style_segment(),
+                theme_powerline_rose_pine::byebyecode_usage_segment(),
+                theme_powerline_rose_pine::byebyecode_subscription_segment(),
             ],
             theme: "powerline-rose-pine".to_string(),
         }
@@ -297,8 +314,11 @@ impl ThemePresets {
                 theme_powerline_tokyo_night::cost_segment(),
                 theme_powerline_tokyo_night::session_segment(),
                 theme_powerline_tokyo_night::output_style_segment(),
+                theme_powerline_tokyo_night::byebyecode_usage_segment(),
+                theme_powerline_tokyo_night::byebyecode_subscription_segment(),
             ],
             theme: "powerline-tokyo-night".to_string(),
         }
     }
 }
+

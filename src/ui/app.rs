@@ -503,6 +503,9 @@ impl App {
                         SegmentId::Session => "Session",
                         SegmentId::OutputStyle => "Output Style",
                         SegmentId::Update => "Update",
+                        SegmentId::ByeByeCodeUsage => "ByeByeCode Usage",
+                        SegmentId::ByeByeCodeSubscription => "ByeByeCode Subscription",
+                        SegmentId::ByeByeCodeStatus => "ByeByeCode Status",
                     };
                     let is_enabled = segment.enabled;
                     self.status_message = Some(format!(
@@ -530,6 +533,9 @@ impl App {
                                 SegmentId::Session => "Session",
                                 SegmentId::OutputStyle => "Output Style",
                                 SegmentId::Update => "Update",
+                        SegmentId::ByeByeCodeUsage => "ByeByeCode Usage",
+                        SegmentId::ByeByeCodeSubscription => "ByeByeCode Subscription",
+                        SegmentId::ByeByeCodeStatus => "ByeByeCode Status",
                             };
                             let is_enabled = segment.enabled;
                             self.status_message = Some(format!(
@@ -626,7 +632,43 @@ impl App {
     }
 
     fn switch_to_theme(&mut self, theme_name: &str) {
-        self.config = crate::ui::themes::ThemePresets::get_theme(theme_name);
+        // Get the new theme
+        let new_theme = crate::ui::themes::ThemePresets::get_theme(theme_name);
+
+        // Preserve user's enabled/disabled state and custom settings by merging
+        let mut merged_segments = Vec::new();
+
+        // For each segment in the new theme
+        for new_segment in new_theme.segments {
+            // Try to find corresponding segment in current config
+            if let Some(old_segment) = self.config.segments.iter().find(|s| s.id == new_segment.id) {
+                // Merge: use new theme's colors/icons but preserve enabled state and options
+                let mut merged = new_segment.clone();
+                merged.enabled = old_segment.enabled;
+                // Preserve user's custom options if they exist
+                for (key, value) in &old_segment.options {
+                    merged.options.insert(key.clone(), value.clone());
+                }
+                merged_segments.push(merged);
+            } else {
+                // New segment not in current config, add it as-is
+                merged_segments.push(new_segment);
+            }
+        }
+
+        // Also add any segments from old config that aren't in new theme
+        // (like byebyecode segments if they were manually added)
+        for old_segment in &self.config.segments {
+            if !merged_segments.iter().any(|s| s.id == old_segment.id) {
+                merged_segments.push(old_segment.clone());
+            }
+        }
+
+        // Update config with merged segments
+        self.config.segments = merged_segments;
+        self.config.style = new_theme.style;
+        self.config.theme = theme_name.to_string();
+
         self.selected_segment = 0;
         self.preview.update_preview(&self.config);
         self.status_message = Some(format!("Switched to {} theme", theme_name));

@@ -1,8 +1,8 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[command(name = "ccline")]
-#[command(version, about = "High-performance Claude Code StatusLine")]
+#[command(name = "byebyecode")]
+#[command(version, about = "byebyecode - Claude Code Wrapper with Translation & Enhanced Features")]
 pub struct Cli {
     /// Enter TUI configuration mode
     #[arg(short = 'c', long = "config")]
@@ -31,6 +31,18 @@ pub struct Cli {
     /// Patch Claude Code cli.js to disable context warnings
     #[arg(long = "patch")]
     pub patch: Option<String>,
+
+    /// Start byebyecode wrapper mode (inject into Claude Code)
+    #[arg(long = "wrap")]
+    pub wrap: bool,
+
+    /// Enable/disable translation feature
+    #[arg(long = "translation")]
+    pub translation: Option<bool>,
+
+    /// Set GLM API key for translation
+    #[arg(long = "glm-key")]
+    pub glm_key: Option<String>,
 }
 
 impl Cli {

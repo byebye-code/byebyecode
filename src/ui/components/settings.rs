@@ -27,15 +27,18 @@ impl SettingsComponent {
     ) {
         if let Some(segment) = config.segments.get(selected_segment) {
             let segment_name = match segment.id {
-                SegmentId::Model => "Model",
-                SegmentId::Directory => "Directory",
+                SegmentId::Model => "模型",
+                SegmentId::Directory => "目录",
                 SegmentId::Git => "Git",
-                SegmentId::ContextWindow => "Context Window",
-                SegmentId::Usage => "Usage",
-                SegmentId::Cost => "Cost",
-                SegmentId::Session => "Session",
-                SegmentId::OutputStyle => "Output Style",
-                SegmentId::Update => "Update",
+                SegmentId::ContextWindow => "上下文窗口",
+                SegmentId::Usage => "用量",
+                SegmentId::Cost => "费用",
+                SegmentId::Session => "会话",
+                SegmentId::OutputStyle => "输出样式",
+                SegmentId::Update => "更新",
+                SegmentId::ByeByeCodeUsage => "88code 用量",
+                SegmentId::ByeByeCodeSubscription => "88code 订阅",
+                SegmentId::ByeByeCodeStatus => "88code 状态",
             };
             let current_icon = match config.style.mode {
                 StyleMode::Plain => &segment.icon.plain,
@@ -209,18 +212,18 @@ impl SettingsComponent {
                 Line::from(spans)
             };
             let lines = vec![
-                Line::from(format!("{} Segment", segment_name)),
+                Line::from(format!("{} 状态段", segment_name)),
                 create_field_line(
                     FieldSelection::Enabled,
                     vec![Span::raw(format!(
-                        "├─ Enabled: {}",
+                        "├─ 启用: {}",
                         if segment.enabled { "✓" } else { "✗" }
                     ))],
                 ),
                 create_field_line(
                     FieldSelection::Icon,
                     vec![
-                        Span::raw("├─ Icon: ".to_string()),
+                        Span::raw("├─ 图标: ".to_string()),
                         Span::styled(
                             current_icon.to_string(),
                             Style::default().fg(icon_ratatui_color),
@@ -230,21 +233,21 @@ impl SettingsComponent {
                 create_field_line(
                     FieldSelection::IconColor,
                     vec![
-                        Span::raw(format!("├─ Icon Color: {} ", icon_color_desc)),
+                        Span::raw(format!("├─ 图标颜色: {} ", icon_color_desc)),
                         Span::styled("██".to_string(), Style::default().fg(icon_ratatui_color)),
                     ],
                 ),
                 create_field_line(
                     FieldSelection::TextColor,
                     vec![
-                        Span::raw(format!("├─ Text Color: {} ", text_color_desc)),
+                        Span::raw(format!("├─ 文本颜色: {} ", text_color_desc)),
                         Span::styled("██".to_string(), Style::default().fg(text_ratatui_color)),
                     ],
                 ),
                 create_field_line(
                     FieldSelection::BackgroundColor,
                     vec![
-                        Span::raw(format!("├─ Background Color: {} ", background_color_desc)),
+                        Span::raw(format!("├─ 背景颜色: {} ", background_color_desc)),
                         if segment.colors.background.is_some() {
                             Span::styled(
                                 "██".to_string(),
@@ -258,7 +261,7 @@ impl SettingsComponent {
                 create_field_line(
                     FieldSelection::TextStyle,
                     vec![Span::raw(format!(
-                        "├─ Text Style: Bold {}",
+                        "├─ 文本样式: 加粗 {}",
                         if segment.styles.text_bold {
                             "[✓]"
                         } else {
@@ -269,7 +272,7 @@ impl SettingsComponent {
                 create_field_line(
                     FieldSelection::Options,
                     vec![Span::raw(format!(
-                        "└─ Options: {} items",
+                        "└─ 选项: {} 项",
                         segment.options.len()
                     ))],
                 ),
@@ -277,7 +280,7 @@ impl SettingsComponent {
             let text = Text::from(lines);
             let settings_block = Block::default()
                 .borders(Borders::ALL)
-                .title("Settings")
+                .title("设置")
                 .border_style(if *selected_panel == Panel::Settings {
                     Style::default().fg(Color::Cyan)
                 } else {
@@ -288,13 +291,13 @@ impl SettingsComponent {
         } else {
             let settings_block = Block::default()
                 .borders(Borders::ALL)
-                .title("Settings")
+                .title("设置")
                 .border_style(if *selected_panel == Panel::Settings {
                     Style::default().fg(Color::Cyan)
                 } else {
                     Style::default()
                 });
-            let settings_panel = Paragraph::new("No segment selected").block(settings_block);
+            let settings_panel = Paragraph::new("未选择状态段").block(settings_block);
             f.render_widget(settings_panel, area);
         }
     }

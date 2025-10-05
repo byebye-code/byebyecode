@@ -1,6 +1,11 @@
 # byebyecode
 
-[English](README.md) | [中文](README.zh.md)
+## 88code定制Claude Code 状态栏工具，基于CCometixLine实现
+
+### 使用办法：
+下载release二进制
+在命令行执行 `byebyecode --init` 初始化配置文件
+启动 Claude即可
 
 基于 Rust 的高性能 Claude Code 状态栏工具，集成 Git 信息、使用量跟踪、交互式 TUI 配置和 Claude Code 补丁工具。
 

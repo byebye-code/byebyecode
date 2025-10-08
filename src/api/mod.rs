@@ -73,10 +73,14 @@ pub struct SubscriptionData {
     pub status: String,
     #[serde(rename = "remainingDays")]
     pub remaining_days: i32,
+    #[serde(rename = "billingCycleDesc")]
+    pub billing_cycle_desc: String,
+    #[serde(rename = "resetTimes")]
+    pub reset_times: i32,
+    #[serde(rename = "isActive")]
+    pub is_active: bool,
 
     // 计算字段
-    #[serde(skip)]
-    pub is_active: bool,
     #[serde(skip)]
     pub plan_price: String,
 }
@@ -84,8 +88,7 @@ pub struct SubscriptionData {
 impl SubscriptionData {
     /// 格式化显示数据
     pub fn format(&mut self) {
-        self.is_active = self.status == "活跃中";
-        self.plan_price = format!("¥{}/年", self.cost);
+        self.plan_price = format!("¥{}/{}", self.cost, self.billing_cycle_desc);
     }
 }
 

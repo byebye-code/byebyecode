@@ -34,7 +34,7 @@ impl ApiClient {
         Ok(usage)
     }
 
-    pub fn get_subscription(&self) -> Result<SubscriptionData, Box<dyn std::error::Error>> {
+    pub fn get_subscriptions(&self) -> Result<Vec<SubscriptionData>, Box<dyn std::error::Error>> {
         let response = self
             .client
             .post(&self.config.subscription_url)
@@ -46,16 +46,15 @@ impl ApiClient {
             return Err(format!("Subscription API request failed: {}", response.status()).into());
         }
 
-        // API返回的是数组,取第一个活跃的订阅
-        let subscriptions: Vec<SubscriptionData> = response.json()?;
+        // API返回的是数组,返回所有订阅
+        let mut subscriptions: Vec<SubscriptionData> = response.json()?;
 
-        let mut subscription = subscriptions
-            .into_iter()
-            .find(|s| s.status == "活跃中")
-            .ok_or("No active subscription found")?;
+        // 格式化每个订阅的显示数据
+        for subscription in &mut subscriptions {
+            subscription.format();
+        }
 
-        subscription.format(); // 格式化显示数据
-        Ok(subscription)
+        Ok(subscriptions)
     }
 
     pub fn check_token_limit(&self) -> Result<bool, Box<dyn std::error::Error>> {

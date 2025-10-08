@@ -35,10 +35,7 @@ impl ClaudeCodeInjector {
 
     pub fn start(&self, args: Vec<String>) -> Result<Child, Box<dyn std::error::Error>> {
         let mut cmd = if cfg!(target_os = "windows")
-            && self
-                .claude_path
-                .extension()
-                .is_some_and(|ext| ext == "cmd")
+            && self.claude_path.extension().is_some_and(|ext| ext == "cmd")
         {
             // On Windows, .cmd files need to be run through cmd.exe
             let mut c = Command::new("cmd");
@@ -101,10 +98,7 @@ impl ClaudeCodeInjector {
         // If translation is not enabled, just run Claude Code directly without interception
         if !self.translation_enabled {
             let mut cmd = if cfg!(target_os = "windows")
-                && self
-                    .claude_path
-                    .extension()
-                    .is_some_and(|ext| ext == "cmd")
+                && self.claude_path.extension().is_some_and(|ext| ext == "cmd")
             {
                 let mut c = Command::new("cmd");
                 c.arg("/C");

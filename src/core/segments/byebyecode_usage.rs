@@ -22,7 +22,7 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
-        .or_else(|| crate::api::get_api_key_from_claude_settings());
+        .or_else(crate::api::get_api_key_from_claude_settings);
 
     let api_key = match api_key {
         Some(key) if !key.is_empty() => key,
@@ -73,7 +73,7 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         Err(_) => {
             // API调用失败,显示错误信息
             Some(SegmentData {
-                primary: format!("API错误"),
+                primary: "API错误".to_string(),
                 secondary: String::new(),
                 metadata: HashMap::new(),
             })

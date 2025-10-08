@@ -96,7 +96,7 @@ fn check_health() -> bool {
             Ok(response) => {
                 let status = response.status().as_u16();
                 // 200-299 都认为是健康的
-                return status >= 200 && status < 300;
+                return (200..300).contains(&status);
             }
             Err(_e) => {
                 // 网络错误时，默认认为服务是健康的（避免误报）

@@ -38,7 +38,7 @@ impl ClaudeCodeInjector {
             && self
                 .claude_path
                 .extension()
-                .map_or(false, |ext| ext == "cmd")
+                .is_some_and(|ext| ext == "cmd")
         {
             // On Windows, .cmd files need to be run through cmd.exe
             let mut c = Command::new("cmd");
@@ -104,7 +104,7 @@ impl ClaudeCodeInjector {
                 && self
                     .claude_path
                     .extension()
-                    .map_or(false, |ext| ext == "cmd")
+                    .is_some_and(|ext| ext == "cmd")
             {
                 let mut c = Command::new("cmd");
                 c.arg("/C");
@@ -142,29 +142,25 @@ impl ClaudeCodeInjector {
 
         let stdout_handle = std::thread::spawn(move || {
             let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    if translation_enabled {
-                        if let Some(ref translator) = translator_clone {
-                            if let Ok(translated) = translator.translate_to_chinese(&line) {
-                                println!("{}", translated);
-                                println!("[原文] {}", line);
-                                continue;
-                            }
+            for line in reader.lines().map_while(Result::ok) {
+                if translation_enabled {
+                    if let Some(ref translator) = translator_clone {
+                        if let Ok(translated) = translator.translate_to_chinese(&line) {
+                            println!("{}", translated);
+                            println!("[原文] {}", line);
+                            continue;
                         }
                     }
-                    println!("{}", line);
                 }
+                println!("{}", line);
             }
         });
 
         // Spawn thread to handle stderr
         let stderr_handle = std::thread::spawn(move || {
             let reader = BufReader::new(stderr);
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    eprintln!("{}", line);
-                }
+            for line in reader.lines().map_while(Result::ok) {
+                eprintln!("{}", line);
             }
         });
 
@@ -172,12 +168,10 @@ impl ClaudeCodeInjector {
         let stdin_handle = std::thread::spawn(move || {
             let mut stdin_writer = stdin;
             let stdin_reader = std::io::stdin();
-            for line in stdin_reader.lock().lines() {
-                if let Ok(line) = line {
-                    if let Err(e) = writeln!(stdin_writer, "{}", line) {
-                        eprintln!("Error writing to Claude Code stdin: {}", e);
-                        break;
-                    }
+            for line in stdin_reader.lock().lines().map_while(Result::ok) {
+                if let Err(e) = writeln!(stdin_writer, "{}", line) {
+                    eprintln!("Error writing to Claude Code stdin: {}", e);
+                    break;
                 }
             }
         });

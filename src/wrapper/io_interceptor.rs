@@ -4,6 +4,12 @@ pub struct IoInterceptor {
     pub buffer: Vec<String>,
 }
 
+impl Default for IoInterceptor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IoInterceptor {
     pub fn new() -> Self {
         Self { buffer: Vec::new() }

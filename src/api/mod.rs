@@ -50,9 +50,7 @@ impl UsageData {
 
         let used_credits = self.credit_limit - self.current_credits;
         self.percentage_used = if self.credit_limit > 0.0 {
-            (used_credits / self.credit_limit * 100.0)
-                .max(0.0)
-                .min(100.0)
+            (used_credits / self.credit_limit * 100.0).clamp(0.0, 100.0)
         } else {
             0.0
         };

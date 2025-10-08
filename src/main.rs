@@ -253,7 +253,7 @@ fn run_wrapper_mode(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     }
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-    let result = injector.run_with_interception(claude_args);
+    
 
-    result
+    injector.run_with_interception(claude_args)
 }

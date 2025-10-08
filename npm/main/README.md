@@ -5,7 +5,7 @@ CCometixLine - High-performance Claude Code StatusLine tool
 ## Installation
 
 ```bash
-npm install -g @cometix/ccline
+npm install -g @88code/byebyecode
 ```
 
 ## Features
@@ -18,13 +18,13 @@ npm install -g @cometix/ccline
 
 ## Usage
 
-After installation, ccline is automatically configured for Claude Code at `~/.claude/ccline/ccline`.
+After installation, ccline is automatically configured for Claude Code at `~/.claude/88code/byebyecode`.
 
 You can also use it directly:
 
 ```bash
-ccline --help
-ccline --version
+byebyecode --help
+byebyecode --version
 ```
 
 ## For Users in China
@@ -32,7 +32,7 @@ ccline --version
 Use npm mirror for faster installation:
 
 ```bash
-npm install -g @cometix/ccline --registry https://registry.npmmirror.com
+npm install -g @88code/byebyecode --registry https://registry.npmmirror.com
 ```
 
 ## More Information

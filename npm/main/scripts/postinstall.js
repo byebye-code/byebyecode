@@ -69,7 +69,7 @@ try {
     process.exit(0);
   }
 
-  const binaryName = platform === 'win32' ? 'ccline.exe' : 'ccline';
+  const binaryName = platform === 'win32' ? 'byebyecode.exe' : 'byebyecode';
   const targetPath = path.join(claudeDir, binaryName);
 
   // Multiple path search strategies for different package managers

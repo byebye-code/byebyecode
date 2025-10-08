@@ -2,7 +2,7 @@
   "name": "@88code/byebyecode-linux-x64-musl",
   "version": "0.1.0",
   "description": "Linux x64 static binary for CCometixLine (musl libc)",
-  "files": ["ccline"],
+  "files": ["byebyecode"],
   "os": ["linux"],
   "cpu": ["x64"],
   "repository": {

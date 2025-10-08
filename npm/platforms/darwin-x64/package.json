@@ -2,7 +2,7 @@
   "name": "@88code/byebyecode-darwin-x64",
   "version": "0.1.0",
   "description": "macOS x64 binary for CCometixLine",
-  "files": ["ccline"],
+  "files": ["byebyecode"],
   "os": ["darwin"],
   "cpu": ["x64"],
   "repository": {

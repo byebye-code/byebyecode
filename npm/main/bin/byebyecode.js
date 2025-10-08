@@ -4,12 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// 1. Priority: Use ~/.claude/ccline/ccline if exists
+// 1. Priority: Use ~/.claude/ccline/byebyecode if exists
 const claudePath = path.join(
   os.homedir(), 
   '.claude', 
   'ccline',
-  process.platform === 'win32' ? 'ccline.exe' : 'ccline'
+  process.platform === 'win32' ? 'byebyecode.exe' : 'byebyecode'
 );
 
 if (fs.existsSync(claudePath)) {
@@ -74,7 +74,7 @@ if (!packageName) {
   process.exit(1);
 }
 
-const binaryName = platform === 'win32' ? 'ccline.exe' : 'ccline';
+const binaryName = platform === 'win32' ? 'byebyecode.exe' : 'byebyecode';
 const binaryPath = path.join(__dirname, '..', 'node_modules', packageName, binaryName);
 
 if (!fs.existsSync(binaryPath)) {

@@ -2,7 +2,7 @@
   "name": "@88code/byebyecode-win32-x64",
   "version": "0.1.0",
   "description": "Windows x64 binary for CCometixLine",
-  "files": ["ccline.exe"],
+  "files": ["byebyecode.exe"],
   "os": ["win32"],
   "cpu": ["x64"],
   "repository": {

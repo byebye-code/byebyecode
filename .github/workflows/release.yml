@@ -139,17 +139,17 @@ jobs:
         node npm/scripts/prepare-packages.js
         
         # Copy binaries to platform directories
-        cp extracted/byebyecode-darwin-x64 npm-publish/darwin-x64/ccline
-        cp extracted/byebyecode-darwin-arm64 npm-publish/darwin-arm64/ccline
-        cp extracted/byebyecode-linux-x64 npm-publish/linux-x64/ccline
-        cp extracted/byebyecode-linux-x64-musl npm-publish/linux-x64-musl/ccline
-        cp extracted/byebyecode-win32-x64.exe npm-publish/win32-x64/ccline.exe
+        cp extracted/byebyecode-darwin-x64 npm-publish/darwin-x64/byebyecode
+        cp extracted/byebyecode-darwin-arm64 npm-publish/darwin-arm64/byebyecode
+        cp extracted/byebyecode-linux-x64 npm-publish/linux-x64/byebyecode
+        cp extracted/byebyecode-linux-x64-musl npm-publish/linux-x64-musl/byebyecode
+        cp extracted/byebyecode-win32-x64.exe npm-publish/win32-x64/byebyecode.exe
         
         # Set executable permissions for Unix binaries
-        chmod +x npm-publish/darwin-x64/ccline
-        chmod +x npm-publish/darwin-arm64/ccline
-        chmod +x npm-publish/linux-x64/ccline
-        chmod +x npm-publish/linux-x64-musl/ccline
+        chmod +x npm-publish/darwin-x64/byebyecode
+        chmod +x npm-publish/darwin-arm64/byebyecode
+        chmod +x npm-publish/linux-x64/byebyecode
+        chmod +x npm-publish/linux-x64-musl/byebyecode
         
         # Verify packages
         echo "Package structure:"

@@ -64,97 +64,105 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         }
     };
 
-    // 直接调用API获取实时数据(无缓存)
-    let api_config = ApiConfig {
-        enabled: true,
-        api_key,
-        ..Default::default()
+    // 智能缓存策略
+    let subscriptions = if let Some((cached_data, strategy)) = crate::api::cache::get_cached_subscriptions() {
+        use crate::api::cache::CacheStrategy;
+
+        match strategy {
+            CacheStrategy::Valid => {
+                // 缓存有效，直接使用
+                cached_data
+            }
+            CacheStrategy::StaleButUsable => {
+                // 缓存过期但可用，先返回旧数据，异步更新
+                crate::api::cache::spawn_background_subscription_update(api_key.clone());
+                cached_data
+            }
+            CacheStrategy::MustRefresh => {
+                // 缓存太旧，必须立即刷新
+                fetch_subscriptions_sync(&api_key)?
+            }
+        }
+    } else {
+        // 没有缓存，立即获取
+        fetch_subscriptions_sync(&api_key)?
     };
 
-    let client = match ApiClient::new(api_config) {
-        Ok(c) => c,
-        Err(_) => {
-            return Some(SegmentData {
-                primary: "客户端错误".to_string(),
-                secondary: String::new(),
-                metadata: HashMap::new(),
-            });
-        }
-    };
+    fn fetch_subscriptions_sync(api_key: &str) -> Option<Vec<crate::api::SubscriptionData>> {
+        let api_config = ApiConfig {
+            enabled: true,
+            api_key: api_key.to_string(),
+            ..Default::default()
+        };
 
-    match client.get_subscriptions() {
-        Ok(subscriptions) => {
-            if subscriptions.is_empty() {
-                return Some(SegmentData {
-                    primary: "未订阅".to_string(),
-                    secondary: String::new(),
-                    metadata: HashMap::new(),
-                });
-            }
+        let client = ApiClient::new(api_config).ok()?;
+        let subs = client.get_subscriptions().ok()?;
+        let _ = crate::api::cache::save_cached_subscriptions(&subs);
+        Some(subs)
+    }
 
-            // 组合所有订阅信息
-            let mut subscription_texts = Vec::new();
-            let mut metadata = HashMap::new();
+    // 处理订阅数据
+    if subscriptions.is_empty() {
+        return Some(SegmentData {
+            primary: "未订阅".to_string(),
+            secondary: String::new(),
+            metadata: HashMap::new(),
+        });
+    }
 
-            for (idx, sub) in subscriptions.iter().enumerate() {
-                // 构建每个订阅的完整信息: PAYGO ¥29.9/年付 (活跃中, 可重置2次, 剩余365天)
-                let status_text = if sub.is_active {
-                    "活跃中"
-                } else {
-                    "已禁用"
-                };
+    // 组合所有订阅信息
+    let mut subscription_texts = Vec::new();
+    let mut metadata = HashMap::new();
 
-                let expiry_info = if sub.remaining_days >= 0 {
-                    format!("剩余{}天", sub.remaining_days)
-                } else {
-                    "已过期".to_string()
-                };
+    for (idx, sub) in subscriptions.iter().enumerate() {
+        // 构建每个订阅的完整信息: PAYGO ¥29.9/年付 (活跃中, 可重置2次, 剩余365天)
+        let status_text = if sub.is_active {
+            "活跃中"
+        } else {
+            "已禁用"
+        };
 
-                // 为每个订阅生成基于其计划名的柔和颜色
-                let color = get_soft_color(&sub.plan_name);
-                let subscription_text = format!(
-                    "{}{} {} ({}, 可重置{}次, {}){}",
-                    color,
-                    sub.plan_name,
-                    sub.plan_price,
-                    status_text,
-                    sub.reset_times,
-                    expiry_info,
-                    RESET
-                );
-                subscription_texts.push(subscription_text);
+        let expiry_info = if sub.remaining_days >= 0 {
+            format!("剩余{}天", sub.remaining_days)
+        } else {
+            "已过期".to_string()
+        };
 
-                // 保存元数据
-                metadata.insert(format!("plan_{}", idx), sub.plan_name.clone());
-                metadata.insert(format!("price_{}", idx), sub.plan_price.clone());
-                metadata.insert(format!("status_{}", idx), sub.status.clone());
-                metadata.insert(format!("reset_times_{}", idx), sub.reset_times.to_string());
-                metadata.insert(
-                    format!("remaining_days_{}", idx),
-                    sub.remaining_days.to_string(),
-                );
-                if let Some(expires) = &sub.expires_at {
-                    metadata.insert(format!("expires_at_{}", idx), expires.clone());
-                }
-            }
+        // 为每个订阅生成基于其计划名的柔和颜色
+        let color = get_soft_color(&sub.plan_name);
+        let subscription_text = format!(
+            "{}{} {} ({}, 可重置{}次, {}){}",
+            color,
+            sub.plan_name,
+            sub.plan_price,
+            status_text,
+            sub.reset_times,
+            expiry_info,
+            RESET
+        );
+        subscription_texts.push(subscription_text);
 
-            // 用分隔符连接多个订阅
-            let primary = subscription_texts.join(" | ");
-            let secondary = String::new();
-
-            Some(SegmentData {
-                primary,
-                secondary,
-                metadata,
-            })
-        }
-        Err(_) => {
-            // API调用失败,显示错误信息
-            Some(SegmentData {
-                primary: "API错误".to_string(),
-                secondary: String::new(),
-                metadata: HashMap::new(),
-            })
+        // 保存元数据
+        metadata.insert(format!("plan_{}", idx), sub.plan_name.clone());
+        metadata.insert(format!("price_{}", idx), sub.plan_price.clone());
+        metadata.insert(format!("status_{}", idx), sub.status.clone());
+        metadata.insert(format!("reset_times_{}", idx), sub.reset_times.to_string());
+        metadata.insert(
+            format!("remaining_days_{}", idx),
+            sub.remaining_days.to_string(),
+        );
+        if let Some(expires) = &sub.expires_at {
+            metadata.insert(format!("expires_at_{}", idx), expires.clone());
         }
     }
+
+    // 用分隔符连接多个订阅
+    let primary = subscription_texts.join(" | ");
+    let secondary = String::new();
+
+    Some(SegmentData {
+        primary,
+        secondary,
+        metadata,
+    })
 }

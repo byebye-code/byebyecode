@@ -35,48 +35,56 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         }
     };
 
-    // 直接调用API获取实时数据(无缓存)
-    let api_config = ApiConfig {
-        enabled: true,
-        api_key,
-        ..Default::default()
+    // 智能缓存策略（usage 更频繁更新）
+    let usage = if let Some((cached_data, strategy)) = crate::api::cache::get_cached_usage() {
+        use crate::api::cache::CacheStrategy;
+
+        match strategy {
+            CacheStrategy::Valid => {
+                // 缓存有效（1分钟内），直接使用
+                cached_data
+            }
+            CacheStrategy::StaleButUsable => {
+                // 缓存过期但可用（1分钟到1小时），先返回旧数据，异步更新
+                crate::api::cache::spawn_background_usage_update(api_key.clone());
+                cached_data
+            }
+            CacheStrategy::MustRefresh => {
+                // 缓存太旧（>1小时），必须立即刷新
+                fetch_usage_sync(&api_key)?
+            }
+        }
+    } else {
+        // 没有缓存，立即获取
+        fetch_usage_sync(&api_key)?
     };
 
-    let client = match ApiClient::new(api_config) {
-        Ok(c) => c,
-        Err(_) => {
-            return Some(SegmentData {
-                primary: "客户端错误".to_string(),
-                secondary: String::new(),
-                metadata: HashMap::new(),
-            });
-        }
-    };
+    fn fetch_usage_sync(api_key: &str) -> Option<crate::api::UsageData> {
+        let api_config = ApiConfig {
+            enabled: true,
+            api_key: api_key.to_string(),
+            ..Default::default()
+        };
 
-    match client.get_usage() {
-        Ok(usage) => {
-            let used_dollars = usage.used_tokens as f64 / 100.0;
-            let remaining_dollars = usage.remaining_tokens as f64 / 100.0;
-            let total_dollars = usage.credit_limit;
-
-            let mut metadata = HashMap::new();
-            metadata.insert("used".to_string(), format!("{:.2}", used_dollars));
-            metadata.insert("total".to_string(), format!("{:.2}", total_dollars));
-            metadata.insert("remaining".to_string(), format!("{:.2}", remaining_dollars));
-
-            Some(SegmentData {
-                primary: format!("${:.2}/${:.0}", used_dollars, total_dollars),
-                secondary: format!("剩${:.2}", remaining_dollars),
-                metadata,
-            })
-        }
-        Err(_) => {
-            // API调用失败,显示错误信息
-            Some(SegmentData {
-                primary: "API错误".to_string(),
-                secondary: String::new(),
-                metadata: HashMap::new(),
-            })
-        }
+        let client = ApiClient::new(api_config).ok()?;
+        let usage = client.get_usage().ok()?;
+        let _ = crate::api::cache::save_cached_usage(&usage);
+        Some(usage)
     }
+
+    // 处理使用数据
+    let used_dollars = usage.used_tokens as f64 / 100.0;
+    let remaining_dollars = usage.remaining_tokens as f64 / 100.0;
+    let total_dollars = usage.credit_limit;
+
+    let mut metadata = HashMap::new();
+    metadata.insert("used".to_string(), format!("{:.2}", used_dollars));
+    metadata.insert("total".to_string(), format!("{:.2}", total_dollars));
+    metadata.insert("remaining".to_string(), format!("{:.2}", remaining_dollars));
+
+    Some(SegmentData {
+        primary: format!("${:.2}/${:.0}", used_dollars, total_dollars),
+        secondary: format!("剩${:.2}", remaining_dollars),
+        metadata,
+    })
 }

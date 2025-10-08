@@ -533,9 +533,9 @@ impl App {
                                 SegmentId::Session => "Session",
                                 SegmentId::OutputStyle => "Output Style",
                                 SegmentId::Update => "Update",
-                        SegmentId::ByeByeCodeUsage => "ByeByeCode Usage",
-                        SegmentId::ByeByeCodeSubscription => "ByeByeCode Subscription",
-                        SegmentId::ByeByeCodeStatus => "ByeByeCode Status",
+                                SegmentId::ByeByeCodeUsage => "ByeByeCode Usage",
+                                SegmentId::ByeByeCodeSubscription => "ByeByeCode Subscription",
+                                SegmentId::ByeByeCodeStatus => "ByeByeCode Status",
                             };
                             let is_enabled = segment.enabled;
                             self.status_message = Some(format!(
@@ -641,7 +641,8 @@ impl App {
         // For each segment in the new theme
         for new_segment in new_theme.segments {
             // Try to find corresponding segment in current config
-            if let Some(old_segment) = self.config.segments.iter().find(|s| s.id == new_segment.id) {
+            if let Some(old_segment) = self.config.segments.iter().find(|s| s.id == new_segment.id)
+            {
                 // Merge: use new theme's colors/icons but preserve enabled state and options
                 let mut merged = new_segment.clone();
                 merged.enabled = old_segment.enabled;

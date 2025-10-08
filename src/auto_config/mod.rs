@@ -1,6 +1,6 @@
-use std::path::PathBuf;
-use std::fs;
 use crate::config::Config;
+use std::fs;
+use std::path::PathBuf;
 
 pub mod claude_settings;
 pub use claude_settings::ClaudeSettingsConfigurator;
@@ -11,8 +11,7 @@ pub struct AutoConfigurator {
 
 impl AutoConfigurator {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let home = dirs::home_dir()
-            .ok_or("Could not find home directory")?;
+        let home = dirs::home_dir().ok_or("Could not find home directory")?;
 
         let config_dir = home.join(".claude/88code");
         Ok(Self { config_dir })
@@ -26,23 +25,38 @@ impl AutoConfigurator {
         Ok(())
     }
 
-    pub fn setup_byebyecode(&self, api_key: Option<String>, glm_key: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn setup_byebyecode(
+        &self,
+        api_key: Option<String>,
+        glm_key: Option<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         self.ensure_config_dir()?;
 
         // Load or create default config
         let mut config = Config::load().unwrap_or_else(|_| Config::default());
 
         // Add byebyecode segments if not present
-        use crate::config::{SegmentConfig, SegmentId, IconConfig, ColorConfig, TextStyleConfig, AnsiColor};
+        use crate::config::{
+            AnsiColor, ColorConfig, IconConfig, SegmentConfig, SegmentId, TextStyleConfig,
+        };
         use std::collections::HashMap;
 
-        let has_usage = config.segments.iter().any(|s| matches!(s.id, SegmentId::ByeByeCodeUsage));
-        let has_sub = config.segments.iter().any(|s| matches!(s.id, SegmentId::ByeByeCodeSubscription));
+        let has_usage = config
+            .segments
+            .iter()
+            .any(|s| matches!(s.id, SegmentId::ByeByeCodeUsage));
+        let has_sub = config
+            .segments
+            .iter()
+            .any(|s| matches!(s.id, SegmentId::ByeByeCodeSubscription));
 
         if !has_usage {
             let mut options = HashMap::new();
             if let Some(key) = &api_key {
-                options.insert("api_key".to_string(), serde_json::Value::String(key.clone()));
+                options.insert(
+                    "api_key".to_string(),
+                    serde_json::Value::String(key.clone()),
+                );
             }
 
             config.segments.push(SegmentConfig {
@@ -57,9 +71,7 @@ impl AutoConfigurator {
                     text: Some(AnsiColor::Color256 { c256: 255 }),
                     background: Some(AnsiColor::Color256 { c256: 236 }),
                 },
-                styles: TextStyleConfig {
-                    text_bold: false,
-                },
+                styles: TextStyleConfig { text_bold: false },
                 options,
             });
             println!("✓ 已添加 88code 用量监控段");
@@ -68,7 +80,10 @@ impl AutoConfigurator {
         if !has_sub {
             let mut options = HashMap::new();
             if let Some(key) = &api_key {
-                options.insert("api_key".to_string(), serde_json::Value::String(key.clone()));
+                options.insert(
+                    "api_key".to_string(),
+                    serde_json::Value::String(key.clone()),
+                );
             }
 
             config.segments.push(SegmentConfig {
@@ -83,9 +98,7 @@ impl AutoConfigurator {
                     text: Some(AnsiColor::Color256 { c256: 255 }),
                     background: Some(AnsiColor::Color256 { c256: 236 }),
                 },
-                styles: TextStyleConfig {
-                    text_bold: false,
-                },
+                styles: TextStyleConfig { text_bold: false },
                 options,
             });
             println!("✓ 已添加 88code 订阅信息段");
@@ -99,7 +112,7 @@ impl AutoConfigurator {
 
         // Save API keys to separate config file
         if api_key.is_some() || glm_key.is_some() {
-            use serde::{Serialize, Deserialize};
+            use serde::{Deserialize, Serialize};
 
             #[derive(Serialize, Deserialize)]
             struct ApiKeys {
@@ -153,7 +166,10 @@ impl AutoConfigurator {
         }
 
         println!("✓ Binary installed to: {}", target_path.display());
-        println!("  Add this to your PATH or use directly: {}", target_path.display());
+        println!(
+            "  Add this to your PATH or use directly: {}",
+            target_path.display()
+        );
 
         Ok(())
     }

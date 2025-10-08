@@ -50,14 +50,16 @@ impl UsageData {
 
         let used_credits = self.credit_limit - self.current_credits;
         self.percentage_used = if self.credit_limit > 0.0 {
-            (used_credits / self.credit_limit * 100.0).max(0.0).min(100.0)
+            (used_credits / self.credit_limit * 100.0)
+                .max(0.0)
+                .min(100.0)
         } else {
             0.0
         };
 
         // 直接使用积分(美元)进行显示
         // used_tokens 和 remaining_tokens 现在表示积分(以美分为单位,便于整数显示)
-        self.used_tokens = (used_credits * 100.0) as u64;  // 转换为美分
+        self.used_tokens = (used_credits * 100.0) as u64; // 转换为美分
         self.remaining_tokens = (self.current_credits * 100.0) as u64;
     }
 }

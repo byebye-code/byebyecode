@@ -10,7 +10,9 @@ const CACHE_TTL_SECONDS: u64 = 30; // 30秒检查一次健康状态
 /// 获取缓存路径
 fn get_health_cache_path() -> Option<std::path::PathBuf> {
     dirs::home_dir().map(|home| {
-        home.join(".claude/88code").join(".cache").join("88code_health.json")
+        home.join(".claude/88code")
+            .join(".cache")
+            .join("88code_health.json")
     })
 }
 

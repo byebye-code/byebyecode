@@ -263,7 +263,10 @@ pub fn byebyecode_usage_segment() -> SegmentConfig {
         styles: TextStyleConfig::default(),
         options: {
             let mut opts = HashMap::new();
-            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts.insert(
+                "api_key".to_string(),
+                serde_json::Value::String("".to_string()),
+            );
             opts
         },
     }
@@ -285,7 +288,10 @@ pub fn byebyecode_subscription_segment() -> SegmentConfig {
         styles: TextStyleConfig::default(),
         options: {
             let mut opts = HashMap::new();
-            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts.insert(
+                "api_key".to_string(),
+                serde_json::Value::String("".to_string()),
+            );
             opts
         },
     }

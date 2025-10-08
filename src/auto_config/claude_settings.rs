@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
 /// 自动配置 Claude Code settings.json
 pub struct ClaudeSettingsConfigurator;
@@ -22,7 +22,10 @@ impl ClaudeSettingsConfigurator {
             let path_str = absolute_path.to_string_lossy().to_string();
             // 移除 Windows UNC 前缀 \\?\
             let clean_path = if path_str.starts_with(r"\\?\") {
-                path_str.strip_prefix(r"\\?\").unwrap_or(&path_str).to_string()
+                path_str
+                    .strip_prefix(r"\\?\")
+                    .unwrap_or(&path_str)
+                    .to_string()
             } else {
                 path_str
             };
@@ -38,8 +41,8 @@ impl ClaudeSettingsConfigurator {
 
     /// 配置 statusLine 设置
     pub fn configure_statusline() -> Result<(), Box<dyn std::error::Error>> {
-        let settings_path = Self::get_settings_path()
-            .ok_or("无法找到 Claude settings.json 路径")?;
+        let settings_path =
+            Self::get_settings_path().ok_or("无法找到 Claude settings.json 路径")?;
 
         // 如果文件不存在，创建默认配置
         let mut settings: Value = if settings_path.exists() {
@@ -58,11 +61,14 @@ impl ClaudeSettingsConfigurator {
         if let Some(obj) = settings.as_object_mut() {
             if !obj.contains_key("statusLine") {
                 // 不存在，添加新的 statusLine 配置
-                obj.insert("statusLine".to_string(), json!({
-                    "type": "command",
-                    "command": binary_path,
-                    "padding": 0
-                }));
+                obj.insert(
+                    "statusLine".to_string(),
+                    json!({
+                        "type": "command",
+                        "command": binary_path,
+                        "padding": 0
+                    }),
+                );
                 println!("✓ 已添加 statusLine 配置到 settings.json");
                 modified = true;
             } else {

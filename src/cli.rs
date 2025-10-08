@@ -2,7 +2,10 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(name = "byebyecode")]
-#[command(version, about = "byebyecode - Claude Code Wrapper with Translation & Enhanced Features")]
+#[command(
+    version,
+    about = "byebyecode - Claude Code Wrapper with Translation & Enhanced Features"
+)]
 pub struct Cli {
     /// Enter TUI configuration mode
     #[arg(short = 'c', long = "config")]

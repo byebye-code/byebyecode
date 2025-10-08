@@ -60,7 +60,7 @@ jobs:
       if: matrix.os != 'windows-latest' && matrix.target != 'x86_64-pc-windows-gnu'
       run: |
         mkdir -p dist
-        cp target/${{ matrix.target }}/release/ccometixline dist/byebyecode
+        cp target/${{ matrix.target }}/release/byebyecode dist/byebyecode
         cd dist
         tar czf ../${{ matrix.name }} byebyecode
 
@@ -68,7 +68,7 @@ jobs:
       if: matrix.target == 'x86_64-pc-windows-gnu'
       run: |
         mkdir -p dist
-        cp target/${{ matrix.target }}/release/ccometixline.exe dist/byebyecode.exe
+        cp target/${{ matrix.target }}/release/byebyecode.exe dist/byebyecode.exe
         cd dist
         zip ../${{ matrix.name }} byebyecode.exe
 

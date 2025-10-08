@@ -179,7 +179,10 @@ pub fn byebyecode_usage_segment() -> SegmentConfig {
         styles: TextStyleConfig { text_bold: false },
         options: {
             let mut opts = HashMap::new();
-            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts.insert(
+                "api_key".to_string(),
+                serde_json::Value::String("".to_string()),
+            );
             opts
         },
     }
@@ -194,14 +197,17 @@ pub fn byebyecode_subscription_segment() -> SegmentConfig {
             nerd_font: "\u{f0e21}".to_string(), // nf-md-crown
         },
         colors: ColorConfig {
-            icon: Some(AnsiColor::Color256 { c256: 39 }), // Blue
+            icon: Some(AnsiColor::Color256 { c256: 39 }),  // Blue
             text: Some(AnsiColor::Color256 { c256: 255 }), // White
             background: None,
         },
         styles: TextStyleConfig { text_bold: false },
         options: {
             let mut opts = HashMap::new();
-            opts.insert("api_key".to_string(), serde_json::Value::String("".to_string()));
+            opts.insert(
+                "api_key".to_string(),
+                serde_json::Value::String("".to_string()),
+            );
             opts
         },
     }

@@ -1,3 +1,6 @@
+pub mod byebyecode_status;
+pub mod byebyecode_subscription;
+pub mod byebyecode_usage;
 pub mod context_window;
 pub mod cost;
 pub mod directory;
@@ -7,9 +10,6 @@ pub mod output_style;
 pub mod session;
 pub mod update;
 pub mod usage;
-pub mod byebyecode_usage;
-pub mod byebyecode_subscription;
-pub mod byebyecode_status;
 
 use crate::config::{InputData, SegmentId};
 use std::collections::HashMap;

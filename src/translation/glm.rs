@@ -1,6 +1,6 @@
-use super::{Translator, TranslationConfig};
-use serde::{Deserialize, Serialize};
+use super::{TranslationConfig, Translator};
 use reqwest::blocking::Client;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -34,9 +34,7 @@ pub struct GLMTranslator {
 
 impl GLMTranslator {
     pub fn new(config: TranslationConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        let client = Arc::new(Client::builder()
-            .timeout(Duration::from_secs(30))
-            .build()?);
+        let client = Arc::new(Client::builder().timeout(Duration::from_secs(30)).build()?);
 
         Ok(Self { config, client })
     }
@@ -50,7 +48,8 @@ impl GLMTranslator {
             }],
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post(&self.config.api_url)
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .header("Content-Type", "application/json")
@@ -72,7 +71,10 @@ impl GLMTranslator {
 }
 
 impl Translator for GLMTranslator {
-    fn translate_to_english(&self, chinese_text: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn translate_to_english(
+        &self,
+        chinese_text: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let prompt = format!(
             "请将以下中文翻译成信达雅的英文,只返回翻译结果,不要有任何解释:\n\n{}",
             chinese_text
@@ -80,7 +82,10 @@ impl Translator for GLMTranslator {
         self.call_api(&prompt)
     }
 
-    fn translate_to_chinese(&self, english_text: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn translate_to_chinese(
+        &self,
+        english_text: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let prompt = format!(
             "请将以下英文翻译成流畅的中文,只返回翻译结果,不要有任何解释:\n\n{}",
             english_text

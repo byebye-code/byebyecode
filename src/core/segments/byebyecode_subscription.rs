@@ -1,12 +1,14 @@
+use crate::api::{client::ApiClient, ApiConfig};
 use crate::config::Config;
 use crate::config::InputData;
 use crate::core::segments::SegmentData;
-use crate::api::{client::ApiClient, ApiConfig};
 use std::collections::HashMap;
 
 pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     // Get API config from segment options
-    let segment = config.segments.iter()
+    let segment = config
+        .segments
+        .iter()
         .find(|s| matches!(s.id, crate::config::SegmentId::ByeByeCodeSubscription))?;
 
     if !segment.enabled {
@@ -14,7 +16,9 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     }
 
     // Try to get API key from segment options first, then from Claude settings
-    let api_key = segment.options.get("api_key")
+    let api_key = segment
+        .options
+        .get("api_key")
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())

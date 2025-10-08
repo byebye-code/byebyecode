@@ -20,6 +20,12 @@ impl Default for TranslationConfig {
 }
 
 pub trait Translator {
-    fn translate_to_english(&self, chinese_text: &str) -> Result<String, Box<dyn std::error::Error>>;
-    fn translate_to_chinese(&self, english_text: &str) -> Result<String, Box<dyn std::error::Error>>;
+    fn translate_to_english(
+        &self,
+        chinese_text: &str,
+    ) -> Result<String, Box<dyn std::error::Error>>;
+    fn translate_to_chinese(
+        &self,
+        english_text: &str,
+    ) -> Result<String, Box<dyn std::error::Error>>;
 }

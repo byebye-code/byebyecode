@@ -6,9 +6,7 @@ pub struct IoInterceptor {
 
 impl IoInterceptor {
     pub fn new() -> Self {
-        Self {
-            buffer: Vec::new(),
-        }
+        Self { buffer: Vec::new() }
     }
 
     pub fn read_line(&mut self) -> io::Result<String> {

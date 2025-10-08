@@ -1,9 +1,9 @@
+use byebyecode::auto_config::AutoConfigurator;
 use byebyecode::cli::Cli;
 use byebyecode::config::{Config, InputData};
 use byebyecode::core::{collect_all_segments, StatusLineGenerator};
-use byebyecode::wrapper::{find_claude_code, injector::ClaudeCodeInjector};
 use byebyecode::translation::TranslationConfig;
-use byebyecode::auto_config::AutoConfigurator;
+use byebyecode::wrapper::{find_claude_code, injector::ClaudeCodeInjector};
 use std::io::{self, IsTerminal};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 自动配置 Claude Code settings.json
         println!("\n正在配置 Claude Code settings.json...");
         match byebyecode::auto_config::ClaudeSettingsConfigurator::configure_statusline() {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("⚠ 配置 Claude settings.json 失败: {}", e);
                 eprintln!("  你可以手动配置 statusLine 字段");
@@ -238,7 +238,8 @@ fn run_wrapper_mode(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     let mut injector = ClaudeCodeInjector::new(claude_path, translation_config)?;
 
     // Get remaining args to pass to Claude Code
-    let claude_args: Vec<String> = std::env::args().skip(1)
+    let claude_args: Vec<String> = std::env::args()
+        .skip(1)
         .filter(|arg| arg != "--wrap")
         .collect();
 

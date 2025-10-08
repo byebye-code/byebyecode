@@ -14,9 +14,7 @@ pub fn find_claude_code() -> Result<PathBuf, Box<dyn std::error::Error>> {
             {
                 // Windows: Check AppData locations
                 if let Ok(appdata) = std::env::var("APPDATA") {
-                    let claude_path = PathBuf::from(appdata)
-                        .join("npm")
-                        .join("claude.cmd");
+                    let claude_path = PathBuf::from(appdata).join("npm").join("claude.cmd");
                     if claude_path.exists() {
                         return Ok(claude_path);
                     }
@@ -26,10 +24,7 @@ pub fn find_claude_code() -> Result<PathBuf, Box<dyn std::error::Error>> {
             #[cfg(target_os = "macos")]
             {
                 // macOS: Check common npm global paths
-                let paths = vec![
-                    "/usr/local/bin/claude",
-                    "/opt/homebrew/bin/claude",
-                ];
+                let paths = vec!["/usr/local/bin/claude", "/opt/homebrew/bin/claude"];
                 for path in paths {
                     let p = PathBuf::from(path);
                     if p.exists() {
@@ -41,10 +36,7 @@ pub fn find_claude_code() -> Result<PathBuf, Box<dyn std::error::Error>> {
             #[cfg(target_os = "linux")]
             {
                 // Linux: Check common paths
-                let paths = vec![
-                    "/usr/local/bin/claude",
-                    "/usr/bin/claude",
-                ];
+                let paths = vec!["/usr/local/bin/claude", "/usr/bin/claude"];
                 for path in paths {
                     let p = PathBuf::from(path);
                     if p.exists() {

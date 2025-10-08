@@ -1,8 +1,8 @@
-use std::process::{Command, Stdio, Child};
+use crate::translation::glm::GLMTranslator;
+use crate::translation::{TranslationConfig, Translator};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
-use crate::translation::{Translator, TranslationConfig};
-use crate::translation::glm::GLMTranslator;
+use std::process::{Child, Command, Stdio};
 
 pub struct ClaudeCodeInjector {
     claude_path: PathBuf,
@@ -34,7 +34,12 @@ impl ClaudeCodeInjector {
     }
 
     pub fn start(&self, args: Vec<String>) -> Result<Child, Box<dyn std::error::Error>> {
-        let mut cmd = if cfg!(target_os = "windows") && self.claude_path.extension().map_or(false, |ext| ext == "cmd") {
+        let mut cmd = if cfg!(target_os = "windows")
+            && self
+                .claude_path
+                .extension()
+                .map_or(false, |ext| ext == "cmd")
+        {
             // On Windows, .cmd files need to be run through cmd.exe
             let mut c = Command::new("cmd");
             c.arg("/C");
@@ -61,9 +66,10 @@ impl ClaudeCodeInjector {
         if self.translation_enabled {
             if let Some(translator) = &self.translator {
                 // Detect if input contains Chinese characters
-                if input.chars().any(|c| {
-                    matches!(c, '\u{4E00}'..='\u{9FFF}' | '\u{3400}'..='\u{4DBF}')
-                }) {
+                if input
+                    .chars()
+                    .any(|c| matches!(c, '\u{4E00}'..='\u{9FFF}' | '\u{3400}'..='\u{4DBF}'))
+                {
                     // Translate Chinese to English
                     return translator.translate_to_english(input);
                 }
@@ -88,10 +94,18 @@ impl ClaudeCodeInjector {
         }
     }
 
-    pub fn run_with_interception(&mut self, args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run_with_interception(
+        &mut self,
+        args: Vec<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // If translation is not enabled, just run Claude Code directly without interception
         if !self.translation_enabled {
-            let mut cmd = if cfg!(target_os = "windows") && self.claude_path.extension().map_or(false, |ext| ext == "cmd") {
+            let mut cmd = if cfg!(target_os = "windows")
+                && self
+                    .claude_path
+                    .extension()
+                    .map_or(false, |ext| ext == "cmd")
+            {
                 let mut c = Command::new("cmd");
                 c.arg("/C");
                 c.arg(&self.claude_path);

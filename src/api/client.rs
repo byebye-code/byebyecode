@@ -1,4 +1,4 @@
-use super::{ApiConfig, UsageData, SubscriptionData};
+use super::{ApiConfig, SubscriptionData, UsageData};
 use reqwest::blocking::Client;
 use std::time::Duration;
 
@@ -18,7 +18,8 @@ impl ApiClient {
     }
 
     pub fn get_usage(&self) -> Result<UsageData, Box<dyn std::error::Error>> {
-        let response = self.client
+        let response = self
+            .client
             .post(&self.config.usage_url)
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .header("Content-Type", "application/json")
@@ -34,7 +35,8 @@ impl ApiClient {
     }
 
     pub fn get_subscription(&self) -> Result<SubscriptionData, Box<dyn std::error::Error>> {
-        let response = self.client
+        let response = self
+            .client
             .post(&self.config.subscription_url)
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .header("Content-Type", "application/json")

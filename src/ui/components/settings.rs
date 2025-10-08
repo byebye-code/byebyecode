@@ -271,10 +271,7 @@ impl SettingsComponent {
                 ),
                 create_field_line(
                     FieldSelection::Options,
-                    vec![Span::raw(format!(
-                        "└─ 选项: {} 项",
-                        segment.options.len()
-                    ))],
+                    vec![Span::raw(format!("└─ 选项: {} 项", segment.options.len()))],
                 ),
             ];
             let text = Text::from(lines);

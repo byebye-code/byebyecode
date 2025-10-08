@@ -1,5 +1,5 @@
-pub mod client;
 pub mod cache;
+pub mod client;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

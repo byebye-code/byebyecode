@@ -1,7 +1,7 @@
 use super::{Segment, SegmentData};
 use crate::config::{InputData, SegmentId};
 use crate::utils::credentials;
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use chrono::{DateTime, Datelike, Duration, Local, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -50,7 +50,16 @@ impl UsageSegment {
     fn format_reset_time(reset_time_str: Option<&str>) -> String {
         if let Some(time_str) = reset_time_str {
             if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
-                return format!("{}-{}-{}", dt.month(), dt.day(), dt.hour());
+                let mut local_dt = dt.with_timezone(&Local);
+                if local_dt.minute() > 45 {
+                    local_dt += Duration::hours(1);
+                }
+                return format!(
+                    "{}-{}-{}",
+                    local_dt.month(),
+                    local_dt.day(),
+                    local_dt.hour()
+                );
             }
         }
         "?".to_string()

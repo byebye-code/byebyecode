@@ -65,28 +65,35 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     };
 
     // 智能缓存策略
-    let subscriptions = if let Some((cached_data, strategy)) = crate::api::cache::get_cached_subscriptions() {
-        use crate::api::cache::CacheStrategy;
+    let subscriptions =
+        if let Some((mut cached_data, strategy)) = crate::api::cache::get_cached_subscriptions() {
+            use crate::api::cache::CacheStrategy;
 
-        match strategy {
-            CacheStrategy::Valid => {
-                // 缓存有效，直接使用
-                cached_data
+            match strategy {
+                CacheStrategy::Valid => {
+                    // 缓存有效，直接使用（需要格式化 plan_price）
+                    for sub in &mut cached_data {
+                        sub.format();
+                    }
+                    cached_data
+                }
+                CacheStrategy::StaleButUsable => {
+                    // 缓存过期但可用，先返回旧数据，异步更新
+                    crate::api::cache::spawn_background_subscription_update(api_key.clone());
+                    for sub in &mut cached_data {
+                        sub.format();
+                    }
+                    cached_data
+                }
+                CacheStrategy::MustRefresh => {
+                    // 缓存太旧，必须立即刷新
+                    fetch_subscriptions_sync(&api_key)?
+                }
             }
-            CacheStrategy::StaleButUsable => {
-                // 缓存过期但可用，先返回旧数据，异步更新
-                crate::api::cache::spawn_background_subscription_update(api_key.clone());
-                cached_data
-            }
-            CacheStrategy::MustRefresh => {
-                // 缓存太旧，必须立即刷新
-                fetch_subscriptions_sync(&api_key)?
-            }
-        }
-    } else {
-        // 没有缓存，立即获取
-        fetch_subscriptions_sync(&api_key)?
-    };
+        } else {
+            // 没有缓存，立即获取
+            fetch_subscriptions_sync(&api_key)?
+        };
 
     fn fetch_subscriptions_sync(api_key: &str) -> Option<Vec<crate::api::SubscriptionData>> {
         let api_config = ApiConfig {
@@ -132,13 +139,7 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         let color = get_soft_color(&sub.plan_name);
         let subscription_text = format!(
             "{}{} {} ({}, 可重置{}次, {}){}",
-            color,
-            sub.plan_name,
-            sub.plan_price,
-            status_text,
-            sub.reset_times,
-            expiry_info,
-            RESET
+            color, sub.plan_name, sub.plan_price, status_text, sub.reset_times, expiry_info, RESET
         );
         subscription_texts.push(subscription_text);
 

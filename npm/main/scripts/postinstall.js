@@ -14,7 +14,7 @@ try {
   const platform = process.platform;
   const arch = process.arch;
   const homeDir = os.homedir();
-  const claudeDir = path.join(homeDir, '.claude', 'ccline');
+  const claudeDir = path.join(homeDir, '.claude', '88code');
 
   // Create directory
   fs.mkdirSync(claudeDir, { recursive: true });
@@ -123,7 +123,7 @@ try {
   if (!sourcePath) {
     if (!silent) {
       console.log('Binary package not installed, skipping Claude Code setup');
-      console.log('The global ccline command will still work via npm');
+      console.log('The global byebyecode command will still work via npm');
     }
     process.exit(0);
   }
@@ -148,13 +148,13 @@ try {
   if (!silent) {
     console.log('✨ CCometixLine is ready for Claude Code!');
     console.log(`📍 Location: ${targetPath}`);
-    console.log('🎉 You can now use: ccline --help');
+    console.log('🎉 You can now use: byebyecode --help');
   }
 } catch (error) {
   // Silent failure - don't break installation
   if (!silent) {
     console.log('Note: Could not auto-configure for Claude Code');
-    console.log('The global ccline command will still work.');
+    console.log('The global byebyecode command will still work.');
     console.log('You can manually copy ccline to ~/.claude/ccline/ if needed');
   }
 }

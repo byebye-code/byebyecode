@@ -2,6 +2,15 @@
 
 ## 88code定制Claude Code 状态栏工具，基于CCometixLine实现
 
+### 安装命令
+```bash
+npm install -g @88code/byebyecode
+```
+中国加速
+```bash
+npm install -g @88code/byebyecode --registry=https://registry.npmmirror.com
+```
+
 ### 使用办法：
 下载release二进制
 在命令行执行 `byebyecode --init` 初始化配置文件
@@ -9,7 +18,9 @@
 
 基于 Rust 的高性能 Claude Code 状态栏工具，集成 Git 信息、使用量跟踪、交互式 TUI 配置和 Claude Code 补丁工具。
 
-> **说明**: 这是一个增强版分支。特别感谢 [@cometix-ai](https://github.com/cometix-ai) 的[原始 CCometixLine 项目](https://github.com/cometix-ai/ccline)，为本项目提供了优秀的基础。
+> **说明**: 这是一个增强版分支。特别感谢 [原始 CCometixLine 项目](https://github.com/Haleclipse/CCometixLine)，为本项目提供了优秀的基础。
+感谢哈雷佬的幸苦付出！！！
+
 
 ![Language:Rust](https://img.shields.io/static/v1?label=Language&message=Rust&color=orange&style=flat-square)
 ![License:MIT](https://img.shields.io/static/v1?label=License&message=MIT&color=blue&style=flat-square)
@@ -64,25 +75,6 @@
 - **自动配置工具** - 简化的安装配置流程
 - **新增段落** - `byebyecode_usage`、`byebyecode_subscription`、`byebyecode_status`
 
-## 安装
-
-### 快速安装（推荐）
-
-到release去下载最新版release，解压并运行
-
-安装后：
-- ✅ 全局命令 `byebyecode` 可在任何地方使用
-- ⚙️ 按照下方提示进行配置以集成到 Claude Code
-- 🎨 运行 `byebyecode -c` 打开配置面板进行主题选择
-
-
-
-### 更新
-
-<summary>手动安装（点击展开）</summary>
-
-或者从 [Releases](https://github.com/byebye-code/byebyecode/releases) 手动下载：
-
 
 ## 使用
 
@@ -115,7 +107,7 @@ byebyecode --theme gruvbox
 byebyecode --theme nord
 byebyecode --theme powerline-dark
 
-# 或使用 ~/.claude/byebyecode/themes/ 目录下的自定义主题
+# 或使用 ~/.claude/88code/themes/ 目录下的自定义主题
 byebyecode --theme my-custom-theme
 ```
 

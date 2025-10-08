@@ -60,7 +60,7 @@ impl UsageSegment {
         let home = dirs::home_dir()?;
         Some(
             home.join(".claude")
-                .join("ccline")
+                .join("88code")
                 .join(".api_usage_cache.json"),
         )
     }

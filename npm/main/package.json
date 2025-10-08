@@ -1,6 +1,6 @@
 {
-  "name": "@cometix/ccline",
-  "version": "0.0.0",
+  "name": "@88code/byebyecode",
+  "version": "0.1.0",
   "description": "CCometixLine - High-performance Claude Code StatusLine tool",
   "bin": {
     "ccline": "./bin/ccline.js"
@@ -9,11 +9,11 @@
     "postinstall": "node scripts/postinstall.js"
   },
   "optionalDependencies": {
-    "@cometix/ccline-darwin-x64": "0.0.0",
-    "@cometix/ccline-darwin-arm64": "0.0.0",
-    "@cometix/ccline-linux-x64": "0.0.0",
-    "@cometix/ccline-linux-x64-musl": "0.0.0",
-    "@cometix/ccline-win32-x64": "0.0.0"
+    "@88code/byebyecode-darwin-x64": "0.1.0",
+    "@88code/byebyecode-darwin-arm64": "0.1.0",
+    "@88code/byebyecode-linux-x64": "0.1.0",
+    "@88code/byebyecode-linux-x64-musl": "0.1.0",
+    "@88code/byebyecode-win32-x64": "0.1.0"
   },
   "repository": {
     "type": "git",

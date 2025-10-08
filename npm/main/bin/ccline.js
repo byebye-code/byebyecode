@@ -58,12 +58,12 @@ if (platform === 'linux') {
 }
 
 const packageMap = {
-  'darwin-x64': '@cometix/ccline-darwin-x64',
-  'darwin-arm64': '@cometix/ccline-darwin-arm64',
-  'linux-x64': '@cometix/ccline-linux-x64',
-  'linux-x64-musl': '@cometix/ccline-linux-x64-musl',
-  'win32-x64': '@cometix/ccline-win32-x64',
-  'win32-ia32': '@cometix/ccline-win32-x64', // Use 64-bit for 32-bit systems
+  'darwin-x64': '@88code/byebyecode-darwin-x64',
+  'darwin-arm64': '@88code/byebyecode-darwin-arm64',
+  'linux-x64': '@88code/byebyecode-linux-x64',
+  'linux-x64-musl': '@88code/byebyecode-linux-x64-musl',
+  'win32-x64': '@88code/byebyecode-win32-x64',
+  'win32-ia32': '@88code/byebyecode-win32-x64', // Use 64-bit for 32-bit systems
 };
 
 const packageName = packageMap[platformKey];
@@ -80,7 +80,7 @@ const binaryPath = path.join(__dirname, '..', 'node_modules', packageName, binar
 if (!fs.existsSync(binaryPath)) {
   console.error(`Error: Binary not found at ${binaryPath}`);
   console.error('This might indicate a failed installation or unsupported platform.');
-  console.error('Please try reinstalling: npm install -g @cometix/ccline');
+  console.error('请尝试重新安装: npm install -g @88code/byebyecode');
   console.error(`Expected package: ${packageName}`);
   process.exit(1);
 }

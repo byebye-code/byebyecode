@@ -53,12 +53,12 @@ try {
   }
 
   const packageMap = {
-    'darwin-x64': '@cometix/ccline-darwin-x64',
-    'darwin-arm64': '@cometix/ccline-darwin-arm64',
-    'linux-x64': '@cometix/ccline-linux-x64',
-    'linux-x64-musl': '@cometix/ccline-linux-x64-musl',
-    'win32-x64': '@cometix/ccline-win32-x64',
-    'win32-ia32': '@cometix/ccline-win32-x64', // Use 64-bit for 32-bit
+    'darwin-x64': '@88code/byebyecode-darwin-x64',
+    'darwin-arm64': '@88code/byebyecode-darwin-arm64',
+    'linux-x64': '@88code/byebyecode-linux-x64',
+    'linux-x64-musl': '@88code/byebyecode-linux-x64-musl',
+    'win32-x64': '@88code/byebyecode-win32-x64',
+    'win32-ia32': '@88code/byebyecode-win32-x64', // Use 64-bit for 32-bit
   };
 
   const packageName = packageMap[platformKey];

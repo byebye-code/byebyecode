@@ -10,7 +10,7 @@ if (!version) {
   process.exit(1);
 }
 
-console.log(`🚀 Preparing packages for version ${version}`);
+console.log(`🚀 正在为版本 ${version} 准备 npm 包`);
 
 // Define platform structures
 const platforms = [
@@ -42,7 +42,7 @@ platforms.forEach(platform => {
     JSON.stringify(packageJson, null, 2) + '\n'
   );
   
-  console.log(`✓ Prepared @cometix/ccline-${platform} v${version}`);
+  console.log(`✓ 已准备 @88code/byebyecode-${platform} v${version}`);
 });
 
 // Prepare main package
@@ -61,7 +61,7 @@ mainPackageJson.version = version;
 // Update optionalDependencies versions
 if (mainPackageJson.optionalDependencies) {
   Object.keys(mainPackageJson.optionalDependencies).forEach(dep => {
-    if (dep.startsWith('@cometix/ccline-')) {
+    if (dep.startsWith('@88code/byebyecode-')) {
       mainPackageJson.optionalDependencies[dep] = version;
     }
   });
@@ -72,9 +72,9 @@ fs.writeFileSync(
   JSON.stringify(mainPackageJson, null, 2) + '\n'
 );
 
-console.log(`✓ Prepared @cometix/ccline v${version}`);
-console.log(`\n🎉 All packages prepared for version ${version}`);
-console.log('\nNext steps:');
-console.log('1. Copy binaries to platform directories');
-console.log('2. Publish platform packages first');
-console.log('3. Publish main package last');
+console.log(`✓ 已准备 @88code/byebyecode v${version}`);
+console.log(`\n🎉 所有包已准备完毕 (版本 ${version})`);
+console.log('\n下一步:');
+console.log('1. 将编译后的二进制复制到平台目录');
+console.log('2. 先发布各平台包');
+console.log('3. 最后发布主包');

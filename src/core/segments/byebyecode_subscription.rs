@@ -108,8 +108,10 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         Some(subs)
     }
 
-    // 处理订阅数据
-    if subscriptions.is_empty() {
+    // 过滤掉已禁用的订阅
+    let active_subscriptions: Vec<_> = subscriptions.iter().filter(|sub| sub.is_active).collect();
+
+    if active_subscriptions.is_empty() {
         return Some(SegmentData {
             primary: "未订阅".to_string(),
             secondary: String::new(),
@@ -121,14 +123,8 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     let mut subscription_texts = Vec::new();
     let mut metadata = HashMap::new();
 
-    for (idx, sub) in subscriptions.iter().enumerate() {
-        // 构建每个订阅的完整信息: PAYGO ¥29.9/年付 (活跃中, 可重置2次, 剩余365天)
-        let status_text = if sub.is_active {
-            "活跃中"
-        } else {
-            "已禁用"
-        };
-
+    for (idx, sub) in active_subscriptions.iter().enumerate() {
+        // 构建每个订阅的完整信息
         let expiry_info = if sub.remaining_days >= 0 {
             format!("剩余{}天", sub.remaining_days)
         } else {
@@ -137,10 +133,19 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
 
         // 为每个订阅生成基于其计划名的柔和颜色
         let color = get_soft_color(&sub.plan_name);
-        let subscription_text = format!(
-            "{}{} {} ({}, 可重置{}次, {}){}",
-            color, sub.plan_name, sub.plan_price, status_text, sub.reset_times, expiry_info, RESET
-        );
+
+        // PAYGO 不显示重置次数，其他订阅显示
+        let subscription_text = if sub.plan_name == "PAYGO" {
+            format!(
+                "{}{} {} ({}){}",
+                color, sub.plan_name, sub.plan_price, expiry_info, RESET
+            )
+        } else {
+            format!(
+                "{}{} {} (可重置{}次, {}){}",
+                color, sub.plan_name, sub.plan_price, sub.reset_times, expiry_info, RESET
+            )
+        };
         subscription_texts.push(subscription_text);
 
         // 保存元数据

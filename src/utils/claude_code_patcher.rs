@@ -377,4 +377,263 @@ impl ClaudeCodePatcher {
 
         Ok(())
     }
+
+    /// Find statusline command execution location for injecting auto-refresh
+    /// Searches for the statusline.command execution pattern
+    fn find_statusline_execution_location(&self) -> Option<LocationResult> {
+        // Look for patterns that indicate statusline execution
+        // Pattern 1: execSync or spawn with statusline command
+        let patterns = vec![
+            r"execSync\([^)]*statusLine",
+            r"spawn\([^)]*statusLine",
+            r"\.command\s*&&\s*execSync",
+        ];
+
+        for pattern_str in patterns {
+            if let Ok(pattern) = Regex::new(pattern_str) {
+                if let Some(match_result) = pattern.find(&self.file_content) {
+                    println!("Found statusline execution pattern: {}", pattern_str);
+                    println!("Match: {}", match_result.as_str());
+
+                    return Some(LocationResult {
+                        start_index: match_result.start(),
+                        end_index: match_result.end(),
+                        variable_name: Some(match_result.as_str().to_string()),
+                    });
+                }
+            }
+        }
+
+        // Fallback: search for any function that contains "statusLine"
+        if let Some(statusline_pos) = self.file_content.find("statusLine") {
+            println!("Found statusLine reference at position: {}", statusline_pos);
+
+            // Find the async function definition before this reference
+            let search_start = statusline_pos.saturating_sub(300);
+            let search_text = &self.file_content[search_start..statusline_pos];
+
+            if let Some(func_pos) = search_text.rfind("async function ") {
+                let absolute_func_pos = search_start + func_pos;
+                println!("Found async function at: {}", absolute_func_pos);
+
+                // Find the END of this function - look for pattern: }async or }function
+                let search_end = (statusline_pos + 3000).min(self.file_content.len());
+                let remaining_text = &self.file_content[statusline_pos..search_end];
+
+                // Look for function end: } followed by 'async' or 'function' or capital letter
+                if let Ok(end_pattern) = Regex::new(r"\}\s*(async|function|[A-Z])") {
+                    if let Some(end_match) = end_pattern.find(remaining_text) {
+                        let injection_pos = statusline_pos + end_match.start() + 1; // After '}'
+                        println!("Found function end at position: {}", injection_pos);
+
+                        return Some(LocationResult {
+                            start_index: absolute_func_pos,
+                            end_index: injection_pos,
+                            variable_name: Some("statusline_function_end".to_string()),
+                        });
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract the signal handler initialization function name
+    /// Looks for the function that sets up SIGINT and SIGTERM handlers
+    /// Pattern: var XYZ=AA(()=>{process.on("SIGINT"...process.on("SIGTERM"...)})
+    fn extract_signal_handler_init_function(&self) -> Option<String> {
+        // Strategy 1: Look for SIGINT followed by SIGTERM within reasonable distance
+        // More lenient pattern to handle nested parentheses and different formatting
+        if let Some(sigint_pos) = self.file_content.find(r#"process.on("SIGINT""#) {
+            // Search backward for variable declaration
+            let search_start = sigint_pos.saturating_sub(500);
+            let before_text = &self.file_content[search_start..sigint_pos];
+
+            // Find the last variable declaration before SIGINT
+            if let Ok(var_pattern) = Regex::new(r"var\s+([a-zA-Z0-9_]+)\s*=") {
+                if let Some(captures_iter) = var_pattern.captures_iter(before_text).last() {
+                    let func_name = captures_iter.get(1)?.as_str();
+
+                    // Verify this is the right function by checking if SIGTERM appears nearby
+                    let check_end = (sigint_pos + 200).min(self.file_content.len());
+                    let check_text = &self.file_content[sigint_pos..check_end];
+
+                    if check_text.contains(r#"process.on("SIGTERM""#) {
+                        println!("🎯 Found signal handler init function: {}", func_name);
+                        println!("   Located via SIGINT/SIGTERM pattern");
+                        return Some(func_name.to_string());
+                    }
+                }
+            }
+        }
+
+        println!("❌ Could not find signal handler init function");
+        None
+    }
+
+    /// Extract the function name that handles statusline execution
+    /// Searches for: async function XYZ(A,B,Q=...){...statusLine...}
+    /// Uses multiple strategies to handle different Claude Code versions
+    fn extract_statusline_function_name(&self, _from_pos: usize) -> Option<String> {
+        // Strategy 1: Look for the exact pattern with nA()?.statusLine
+        // This is the most specific pattern found in current versions
+        let specific_pattern = Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]*nA\(\)\?\.statusLine").ok()?;
+        if let Some(capture) = specific_pattern.captures(&self.file_content) {
+            let func_name = capture.get(1)?.as_str();
+            println!("🎯 Found statusline function (strategy 1 - nA pattern): {}", func_name);
+            return Some(func_name.to_string());
+        }
+
+        // Strategy 2: Look for function that contains both statusLine and Ye1 (hook executor)
+        let hook_pattern = Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]{0,500}statusLine[^}]{0,500}Ye1").ok()?;
+        if let Some(capture) = hook_pattern.captures(&self.file_content) {
+            let func_name = capture.get(1)?.as_str();
+            println!("🎯 Found statusline function (strategy 2 - hook pattern): {}", func_name);
+            return Some(func_name.to_string());
+        }
+
+        // Strategy 3: Original pattern - function with statusLine close to definition
+        let pattern = Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]{0,200}statusLine").ok()?;
+        if let Some(capture) = pattern.captures(&self.file_content) {
+            let func_name = capture.get(1)?.as_str();
+            println!("🎯 Found statusline function (strategy 3 - close proximity): {}", func_name);
+            return Some(func_name.to_string());
+        }
+
+        // Strategy 4: Broader search - last async function before statusLine reference
+        if let Some(statusline_pos) = self.file_content.find("statusLine") {
+            let search_start = statusline_pos.saturating_sub(500); // Search further back
+            let search_text = &self.file_content[search_start..statusline_pos];
+
+            if let Ok(func_pattern) = Regex::new(r"async function ([a-zA-Z0-9_]+)\(") {
+                let mut last_match = None;
+                for capture in func_pattern.captures_iter(search_text) {
+                    last_match = Some(capture);
+                }
+
+                if let Some(capture) = last_match {
+                    let func_name = capture.get(1)?.as_str();
+                    println!("🎯 Found statusline function (strategy 4 - last async func): {}", func_name);
+                    return Some(func_name.to_string());
+                }
+            }
+        }
+
+        println!("❌ Could not extract statusline function name with any strategy");
+        None
+    }
+
+    /// Add auto-refresh interval for statusline
+    /// Injects a setInterval that periodically refreshes the statusline display
+    pub fn add_statusline_refresh_interval(&mut self, interval_ms: u32) -> Result<(), Box<dyn std::error::Error>> {
+        // Check if already patched
+        if self.file_content.contains("setInterval(function(){try{") &&
+           (self.file_content.contains("VZA({})") || self.file_content.contains("refreshStatusLine")) {
+            println!("⚠️  Statusline auto-refresh already patched, skipping...");
+            return Ok(());
+        }
+
+        // BEST STRATEGY: Inject after signal handler initialization
+        // Find the function that sets up SIGINT and SIGTERM handlers, then find where it's called
+        let injection_pos = if let Some(init_func_name) = self.extract_signal_handler_init_function() {
+            println!("✅ Found signal handler init function: {}", init_func_name);
+
+            // Now find where this function is called
+            let call_pattern = format!("{}()", init_func_name);
+            if let Some(call_pos) = self.file_content.find(&call_pattern) {
+                println!("✅ Found {} call at position: {}", call_pattern, call_pos);
+
+                // Find the semicolon after the call
+                let search_start = call_pos + call_pattern.len();
+                let remaining = &self.file_content[search_start..];
+
+                if let Some(semicolon_offset) = remaining.find(';') {
+                    let pos = search_start + semicolon_offset + 1;
+                    println!("✅ Injecting after {}; at position: {}", call_pattern, pos);
+                    pos
+                } else {
+                    println!("⚠️  No semicolon found, injecting right after {}()", init_func_name);
+                    search_start
+                }
+            } else {
+                println!("⚠️  Could not find {}() call, using fallback", init_func_name);
+                return Err("Could not find signal handler init call".into());
+            }
+        } else if let Some(location) = self.find_statusline_execution_location() {
+            // Strategy 2: Try to find statusline-specific location (original strategy)
+            println!("✓ Using statusline-specific injection point");
+            location.end_index
+        } else {
+            // Strategy 3: Fallback to general initialization patterns
+            println!("⚠ Using fallback injection strategy");
+
+            let init_patterns = vec![
+                "process.on(\"SIGINT\"",
+                "process.on(\"exit\"",
+                ".render();",
+            ];
+
+            let mut injection_point = None;
+
+            for pattern in init_patterns {
+                if let Some(pos) = self.file_content.rfind(pattern) {
+                    let search_start = pos + pattern.len();
+                    let remaining = &self.file_content[search_start..];
+
+                    if let Some(semicolon_offset) = remaining.find(';') {
+                        injection_point = Some(search_start + semicolon_offset + 1);
+                        println!("Found injection point after: {} at position {}", pattern, injection_point.unwrap());
+                        break;
+                    }
+                }
+            }
+
+            injection_point.ok_or("Could not find suitable injection point")?
+        };
+
+        // Create the refresh interval code
+        // Strategy: Find the statusline execution function and call it periodically
+        // Look for the function that was just defined (likely contains statusLine)
+        let refresh_code = if let Some(func_name) = self.extract_statusline_function_name(injection_pos) {
+            // Call the discovered function with empty object as parameter
+            format!(
+                "setInterval(function(){{try{{{}({{}})}}catch(e){{}}}},{});",
+                func_name, interval_ms
+            )
+        } else {
+            // Fallback: try common patterns
+            format!(
+                "setInterval(function(){{try{{if(typeof refreshStatusLine==='function')refreshStatusLine();else if(typeof updateStatusLine==='function')updateStatusLine();}}catch(e){{}}}},{});",
+                interval_ms
+            )
+        };
+
+        println!("\n🔄 Injecting statusline auto-refresh...");
+        println!("Interval: {}ms ({}s)", interval_ms, interval_ms / 1000);
+        println!("Code: {}", refresh_code);
+
+        // Show context around injection point
+        let context_start = injection_pos.saturating_sub(100);
+        let context_end = (injection_pos + 100).min(self.file_content.len());
+
+        println!("\n--- Injection Context ---");
+        println!("BEFORE: {}", &self.file_content[context_start..injection_pos]);
+        println!(">>> INJECT: \x1b[32m{}\x1b[0m", refresh_code);
+        println!("AFTER: {}", &self.file_content[injection_pos..context_end]);
+        println!("--- End Context ---\n");
+
+        // Inject the code
+        let new_content = format!(
+            "{}{}{}",
+            &self.file_content[..injection_pos],
+            refresh_code,
+            &self.file_content[injection_pos..]
+        );
+
+        self.file_content = new_content;
+        println!("✅ Statusline auto-refresh interval added successfully");
+
+        Ok(())
+    }
 }

@@ -166,7 +166,7 @@ pub fn usage_segment() -> SegmentConfig {
 pub fn byebyecode_usage_segment() -> SegmentConfig {
     SegmentConfig {
         id: SegmentId::ByeByeCodeUsage,
-        enabled: false,
+        enabled: true,
         icon: IconConfig {
             plain: "88code".to_string(),
             nerd_font: "\u{f0690}".to_string(), // nf-md-gauge
@@ -191,7 +191,7 @@ pub fn byebyecode_usage_segment() -> SegmentConfig {
 pub fn byebyecode_subscription_segment() -> SegmentConfig {
     SegmentConfig {
         id: SegmentId::ByeByeCodeSubscription,
-        enabled: false,
+        enabled: true,
         icon: IconConfig {
             plain: "订阅".to_string(),
             nerd_font: "\u{f0e21}".to_string(), // nf-md-crown
@@ -210,5 +210,23 @@ pub fn byebyecode_subscription_segment() -> SegmentConfig {
             );
             opts
         },
+    }
+}
+
+pub fn byebyecode_status_segment() -> SegmentConfig {
+    SegmentConfig {
+        id: SegmentId::ByeByeCodeStatus,
+        enabled: true, // 默认启用
+        icon: IconConfig {
+            plain: "".to_string(), // 无图标,直接显示文字
+            nerd_font: "".to_string(),
+        },
+        colors: ColorConfig {
+            icon: None,
+            text: None, // 颜色由segment自己控制(彩色文字效果)
+            background: None,
+        },
+        styles: TextStyleConfig::default(),
+        options: HashMap::new(),
     }
 }

@@ -35,29 +35,8 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         }
     };
 
-    // 智能缓存策略（usage 更频繁更新）
-    let usage = if let Some((cached_data, strategy)) = crate::api::cache::get_cached_usage() {
-        use crate::api::cache::CacheStrategy;
-
-        match strategy {
-            CacheStrategy::Valid => {
-                // 缓存有效（1分钟内），直接使用
-                cached_data
-            }
-            CacheStrategy::StaleButUsable => {
-                // 缓存过期但可用（1分钟到1小时），先返回旧数据，异步更新
-                crate::api::cache::spawn_background_usage_update(api_key.clone());
-                cached_data
-            }
-            CacheStrategy::MustRefresh => {
-                // 缓存太旧（>1小时），必须立即刷新
-                fetch_usage_sync(&api_key)?
-            }
-        }
-    } else {
-        // 没有缓存，立即获取
-        fetch_usage_sync(&api_key)?
-    };
+    // 实时获取数据，不使用缓存
+    let usage = fetch_usage_sync(&api_key)?;
 
     fn fetch_usage_sync(api_key: &str) -> Option<crate::api::UsageData> {
         let api_config = ApiConfig {
@@ -68,13 +47,12 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
 
         let client = ApiClient::new(api_config).ok()?;
         let usage = client.get_usage().ok()?;
-        let _ = crate::api::cache::save_cached_usage(&usage);
         Some(usage)
     }
 
     // 处理使用数据
     let used_dollars = usage.used_tokens as f64 / 100.0;
-    let remaining_dollars = usage.remaining_tokens as f64 / 100.0;
+    let remaining_dollars = (usage.remaining_tokens as f64 / 100.0).max(0.0); // 确保不显示负数
     let total_dollars = usage.credit_limit;
 
     let mut metadata = HashMap::new();
@@ -82,9 +60,64 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     metadata.insert("total".to_string(), format!("{:.2}", total_dollars));
     metadata.insert("remaining".to_string(), format!("{:.2}", remaining_dollars));
 
+    // 检查额度是否用完（包括超额使用）
+    if usage.is_exhausted() {
+        // 实时获取订阅信息
+        let subscriptions = fetch_subscriptions_sync(&api_key);
+
+        if let Some(subs) = subscriptions {
+            let active_subs: Vec<_> = subs.iter().filter(|s| s.is_active).collect();
+
+            if active_subs.len() > 1 {
+                // 有多个订阅，提示切换到其他套餐
+                return Some(SegmentData {
+                    primary: format!("${:.2}/${:.0} 已用完", used_dollars, total_dollars),
+                    secondary: "提示：你有其他套餐可用".to_string(),
+                    metadata,
+                });
+            } else if active_subs.len() == 1 {
+                // 只有一个订阅，提示手动重置
+                let reset_times = active_subs[0].reset_times;
+                if reset_times > 0 {
+                    return Some(SegmentData {
+                        primary: format!("${:.2}/${:.0} 已用完", used_dollars, total_dollars),
+                        secondary: format!("可重置{}次，请手动重置", reset_times),
+                        metadata,
+                    });
+                } else {
+                    return Some(SegmentData {
+                        primary: format!("${:.2}/${:.0} 已用完", used_dollars, total_dollars),
+                        secondary: "无可用重置次数".to_string(),
+                        metadata,
+                    });
+                }
+            }
+        }
+
+        // 没有订阅信息或无活跃订阅，显示基本提示
+        return Some(SegmentData {
+            primary: format!("${:.2}/${:.0} 已用完", used_dollars, total_dollars),
+            secondary: "请充值或重置额度".to_string(),
+            metadata,
+        });
+    }
+
+    // 正常显示
     Some(SegmentData {
         primary: format!("${:.2}/${:.0}", used_dollars, total_dollars),
         secondary: format!("剩${:.2}", remaining_dollars),
         metadata,
     })
+}
+
+fn fetch_subscriptions_sync(api_key: &str) -> Option<Vec<crate::api::SubscriptionData>> {
+    let api_config = ApiConfig {
+        enabled: true,
+        api_key: api_key.to_string(),
+        ..Default::default()
+    };
+
+    let client = ApiClient::new(api_config).ok()?;
+    let subs = client.get_subscriptions().ok()?;
+    Some(subs)
 }

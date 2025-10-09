@@ -116,6 +116,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("⚠️ Could not disable esc/interrupt display: {}", e);
         }
 
+        // 4. Add statusline auto-refresh (30 seconds interval)
+        if let Err(e) = patcher.add_statusline_refresh_interval(30000) {
+            println!("⚠️ Could not add statusline auto-refresh: {}", e);
+        }
+
         patcher.save()?;
 
         println!("✅ All patches applied successfully!");

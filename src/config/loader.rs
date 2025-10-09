@@ -146,6 +146,15 @@ impl Config {
     pub fn init() -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::get_config_path();
 
+        // Delete existing 88code directory if it exists
+        if let Some(parent) = config_path.parent() {
+            if parent.exists() {
+                println!("Removing existing directory: {}", parent.display());
+                fs::remove_dir_all(parent)?;
+                println!("✓ Old configuration cleaned up");
+            }
+        }
+
         // Create directory
         if let Some(parent) = config_path.parent() {
             fs::create_dir_all(parent)?;
@@ -154,14 +163,10 @@ impl Config {
         // Initialize themes directory and built-in themes
         ConfigLoader::init_themes()?;
 
-        // Create default config if it doesn't exist
-        if !config_path.exists() {
-            let default_config = Config::default();
-            default_config.save()?;
-            println!("Created config at {}", config_path.display());
-        } else {
-            println!("Config already exists at {}", config_path.display());
-        }
+        // Create default config
+        let default_config = Config::default();
+        default_config.save()?;
+        println!("Created config at {}", config_path.display());
 
         Ok(())
     }

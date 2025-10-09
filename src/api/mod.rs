@@ -58,8 +58,21 @@ impl UsageData {
 
         // 直接使用积分(美元)进行显示
         // used_tokens 和 remaining_tokens 现在表示积分(以美分为单位,便于整数显示)
-        self.used_tokens = (used_credits * 100.0) as u64; // 转换为美分
-        self.remaining_tokens = (self.current_credits * 100.0) as u64;
+        // 注意：currentCredits可能是负数（超额使用），需要正确处理
+        self.used_tokens = (used_credits * 100.0).max(0.0) as u64; // 转换为美分
+
+        // remaining_tokens 需要处理负数情况
+        // 如果 current_credits < 0，说明超额，remaining 应该是 0
+        if self.current_credits < 0.0 {
+            self.remaining_tokens = 0;
+        } else {
+            self.remaining_tokens = (self.current_credits * 100.0) as u64;
+        }
+    }
+
+    /// 检查额度是否已用完（包括超额使用）
+    pub fn is_exhausted(&self) -> bool {
+        self.current_credits <= 0.0
     }
 }
 

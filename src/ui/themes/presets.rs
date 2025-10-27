@@ -50,12 +50,12 @@ impl ThemePresets {
         Ok(config)
     }
 
-    /// Get the themes directory path (~/.claude/88code/themes/)
+    /// Get the themes directory path (~/.claude/byebyecode/themes/)
     fn get_themes_path() -> std::path::PathBuf {
         if let Some(home) = dirs::home_dir() {
-            home.join(".claude/88code").join("themes")
+            home.join(".claude/byebyecode").join("themes")
         } else {
-            std::path::PathBuf::from(".claude/88code/themes")
+            std::path::PathBuf::from(".claude/byebyecode/themes")
         }
     }
 

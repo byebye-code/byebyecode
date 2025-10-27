@@ -35,14 +35,30 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         }
     };
 
-    // 实时获取数据，不使用缓存
-    let usage = fetch_usage_sync(&api_key)?;
+    let usage_url = segment
+        .options
+        .get("usage_url")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .or_else(crate::api::get_usage_url_from_claude_settings)
+        .unwrap_or_else(|| "https://www.88code.org/api/usage".to_string());
 
-    fn fetch_usage_sync(api_key: &str) -> Option<crate::api::UsageData> {
+    let subscription_url = segment
+        .options
+        .get("subscription_url")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "https://www.88code.org/api/subscription".to_string());
+
+    let usage = fetch_usage_sync(&api_key, &usage_url)?;
+
+    fn fetch_usage_sync(api_key: &str, usage_url: &str) -> Option<crate::api::UsageData> {
         let api_config = ApiConfig {
             enabled: true,
             api_key: api_key.to_string(),
-            ..Default::default()
+            usage_url: usage_url.to_string(),
+            subscription_url: String::new(),
         };
 
         let client = ApiClient::new(api_config).ok()?;
@@ -51,19 +67,28 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     }
 
     // 处理使用数据
-    let used_dollars = usage.used_tokens as f64 / 100.0;
-    let remaining_dollars = (usage.remaining_tokens as f64 / 100.0).max(0.0); // 确保不显示负数
-    let total_dollars = usage.credit_limit;
+    let used_dollars = usage.get_used_tokens() as f64 / 100.0;
+    let remaining_dollars = (usage.get_remaining_tokens() as f64 / 100.0).max(0.0);
+    let total_dollars = usage.get_credit_limit();
 
     let mut metadata = HashMap::new();
     metadata.insert("used".to_string(), format!("{:.2}", used_dollars));
     metadata.insert("total".to_string(), format!("{:.2}", total_dollars));
     metadata.insert("remaining".to_string(), format!("{:.2}", remaining_dollars));
+    
+    // 根据 usage_url 判断是哪个服务，并设置动态图标
+    let service_name = if usage_url.contains("packyapi.com") {
+        "packy"
+    } else {
+        "88code"
+    };
+    metadata.insert("service".to_string(), service_name.to_string());
+    metadata.insert("dynamic_icon".to_string(), service_name.to_string());
 
     // 检查额度是否用完（包括超额使用）
     if usage.is_exhausted() {
         // 实时获取订阅信息
-        let subscriptions = fetch_subscriptions_sync(&api_key);
+        let subscriptions = fetch_subscriptions_sync(&api_key, &subscription_url);
 
         if let Some(subs) = subscriptions {
             let active_subs: Vec<_> = subs.iter().filter(|s| s.is_active).collect();
@@ -110,11 +135,15 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     })
 }
 
-fn fetch_subscriptions_sync(api_key: &str) -> Option<Vec<crate::api::SubscriptionData>> {
+fn fetch_subscriptions_sync(
+    api_key: &str,
+    subscription_url: &str,
+) -> Option<Vec<crate::api::SubscriptionData>> {
     let api_config = ApiConfig {
         enabled: true,
         api_key: api_key.to_string(),
-        ..Default::default()
+        usage_url: String::new(),
+        subscription_url: subscription_url.to_string(),
     };
 
     let client = ApiClient::new(api_config).ok()?;

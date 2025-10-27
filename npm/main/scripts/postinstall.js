@@ -14,7 +14,7 @@ try {
   const platform = process.platform;
   const arch = process.arch;
   const homeDir = os.homedir();
-  const claudeDir = path.join(homeDir, '.claude', '88code');
+  const claudeDir = path.join(homeDir, '.claude', 'byebyecode');
 
   // Create directory
   fs.mkdirSync(claudeDir, { recursive: true });

@@ -13,7 +13,7 @@ impl AutoConfigurator {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let home = dirs::home_dir().ok_or("Could not find home directory")?;
 
-        let config_dir = home.join(".claude/88code");
+        let config_dir = home.join(".claude/byebyecode");
         Ok(Self { config_dir })
     }
 

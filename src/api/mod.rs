@@ -23,8 +23,21 @@ impl Default for ApiConfig {
     }
 }
 
+impl ApiConfig {
+    pub fn is_packyapi(&self) -> bool {
+        self.usage_url.contains("packyapi.com")
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct UsageData {
+#[serde(untagged)]
+pub enum UsageData {
+    Code88(Code88UsageData),
+    Packy(PackyUsageData),
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Code88UsageData {
     #[serde(rename = "totalTokens")]
     pub total_tokens: u64,
     #[serde(rename = "creditLimit")]
@@ -32,7 +45,6 @@ pub struct UsageData {
     #[serde(rename = "currentCredits")]
     pub current_credits: f64,
 
-    // 计算字段(序列化时保存,从缓存读取时也能用)
     #[serde(default)]
     pub used_tokens: u64,
     #[serde(default)]
@@ -41,14 +53,74 @@ pub struct UsageData {
     pub percentage_used: f64,
 }
 
-impl UsageData {
-    /// 计算已使用和剩余的积分
-    pub fn calculate(&mut self) {
-        // 使用积分而不是token
-        // creditLimit = 20.0刀, currentCredits = 15.35刀
-        // 已使用积分 = 20 - 15.35 = 4.65刀
-        // 使用百分比 = (20 - 15.35) / 20 * 100 = 23.25%
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PackyUsageResponse {
+    pub code: bool,
+    pub data: PackyUsageData,
+    pub message: String,
+}
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PackyUsageData {
+    pub expires_at: i64,
+    pub name: String,
+    pub object: String,
+    pub total_available: u64,
+    pub total_granted: u64,
+    pub total_used: u64,
+    pub unlimited_quota: bool,
+
+    #[serde(default)]
+    pub used_tokens: u64,
+    #[serde(default)]
+    pub remaining_tokens: u64,
+    #[serde(default)]
+    pub percentage_used: f64,
+    #[serde(default)]
+    pub credit_limit: f64,
+    #[serde(default)]
+    pub current_credits: f64,
+}
+
+impl UsageData {
+    pub fn calculate(&mut self) {
+        match self {
+            UsageData::Code88(data) => data.calculate(),
+            UsageData::Packy(data) => data.calculate(),
+        }
+    }
+
+    pub fn is_exhausted(&self) -> bool {
+        match self {
+            UsageData::Code88(data) => data.is_exhausted(),
+            UsageData::Packy(data) => data.is_exhausted(),
+        }
+    }
+
+    pub fn get_used_tokens(&self) -> u64 {
+        match self {
+            UsageData::Code88(data) => data.used_tokens,
+            UsageData::Packy(data) => data.used_tokens,
+        }
+    }
+
+    pub fn get_remaining_tokens(&self) -> u64 {
+        match self {
+            UsageData::Code88(data) => data.remaining_tokens,
+            UsageData::Packy(data) => data.remaining_tokens,
+        }
+    }
+
+    pub fn get_credit_limit(&self) -> f64 {
+        match self {
+            UsageData::Code88(data) => data.credit_limit,
+            UsageData::Packy(data) => data.credit_limit,
+        }
+    }
+}
+
+impl Code88UsageData {
+    pub fn calculate(&mut self) {
         let used_credits = self.credit_limit - self.current_credits;
         self.percentage_used = if self.credit_limit > 0.0 {
             (used_credits / self.credit_limit * 100.0).clamp(0.0, 100.0)
@@ -56,13 +128,8 @@ impl UsageData {
             0.0
         };
 
-        // 直接使用积分(美元)进行显示
-        // used_tokens 和 remaining_tokens 现在表示积分(以美分为单位,便于整数显示)
-        // 注意：currentCredits可能是负数（超额使用），需要正确处理
-        self.used_tokens = (used_credits * 100.0).max(0.0) as u64; // 转换为美分
+        self.used_tokens = (used_credits * 100.0).max(0.0) as u64;
 
-        // remaining_tokens 需要处理负数情况
-        // 如果 current_credits < 0，说明超额，remaining 应该是 0
         if self.current_credits < 0.0 {
             self.remaining_tokens = 0;
         } else {
@@ -70,9 +137,28 @@ impl UsageData {
         }
     }
 
-    /// 检查额度是否已用完（包括超额使用）
     pub fn is_exhausted(&self) -> bool {
         self.current_credits <= 0.0
+    }
+}
+
+impl PackyUsageData {
+    pub fn calculate(&mut self) {
+        self.used_tokens = self.total_used;
+        self.remaining_tokens = self.total_available.saturating_sub(self.total_used);
+
+        self.percentage_used = if self.total_granted > 0 {
+            (self.total_used as f64 / self.total_granted as f64 * 100.0).clamp(0.0, 100.0)
+        } else {
+            0.0
+        };
+
+        self.credit_limit = (self.total_granted as f64) / 100.0;
+        self.current_credits = (self.remaining_tokens as f64) / 100.0;
+    }
+
+    pub fn is_exhausted(&self) -> bool {
+        !self.unlimited_quota && self.remaining_tokens == 0
     }
 }
 
@@ -125,7 +211,7 @@ fn get_claude_settings_path() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".claude").join("settings.json"))
 }
 
-/// Read API key from Claude settings.json if base URL is 88code.org
+/// Read API key from Claude settings.json if base URL is 88code.org or packyapi.com
 pub fn get_api_key_from_claude_settings() -> Option<String> {
     let settings_path = get_claude_settings_path()?;
 
@@ -138,12 +224,37 @@ pub fn get_api_key_from_claude_settings() -> Option<String> {
 
     let env = settings.env?;
 
-    // Only use the API key if base URL is 88code.org
+    // Support both 88code.org and packyapi.com
     if let Some(base_url) = env.base_url {
-        if base_url.contains("88code.org") {
+        if base_url.contains("88code.org") || base_url.contains("packyapi.com") {
             return env.auth_token;
         }
     }
 
     None
+}
+
+/// Get usage_url from Claude settings.json based on ANTHROPIC_BASE_URL
+pub fn get_usage_url_from_claude_settings() -> Option<String> {
+    let settings_path = get_claude_settings_path()?;
+
+    if !settings_path.exists() {
+        return None;
+    }
+
+    let content = std::fs::read_to_string(settings_path).ok()?;
+    let settings = serde_json::from_str::<serde_json::Value>(&content).ok()?;
+
+    let base_url = settings
+        .get("env")?
+        .get("ANTHROPIC_BASE_URL")?
+        .as_str()?;
+
+    if base_url.contains("packyapi.com") {
+        Some("https://www.packyapi.com/api/usage/token/".to_string())
+    } else if base_url.contains("88code.org") {
+        Some("https://www.88code.org/api/usage".to_string())
+    } else {
+        None
+    }
 }

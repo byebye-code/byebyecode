@@ -544,17 +544,38 @@ impl ClaudeCodePatcher {
             if let Some(call_pos) = self.file_content.find(&call_pattern) {
                 println!("✅ Found {} call at position: {}", call_pattern, call_pos);
 
-                // Find the semicolon after the call
-                let search_start = call_pos + call_pattern.len();
-                let remaining = &self.file_content[search_start..];
-
-                if let Some(semicolon_offset) = remaining.find(';') {
-                    let pos = search_start + semicolon_offset + 1;
-                    println!("✅ Injecting after {}; at position: {}", call_pattern, pos);
-                    pos
+                // Find the try-catch block that contains this call
+                // Look backward to find 'try{'
+                let search_back_start = call_pos.saturating_sub(500);
+                let before_text = &self.file_content[search_back_start..call_pos];
+                
+                if let Some(try_offset) = before_text.rfind("try{") {
+                    let try_pos = search_back_start + try_offset;
+                    println!("✅ Found try block at position: {}", try_pos);
+                    
+                    // Now find the end of the try-catch block
+                    // Look for pattern: }catch(...){...}
+                    let search_forward_start = call_pos;
+                    let remaining = &self.file_content[search_forward_start..];
+                    
+                    // Find the matching closing brace for the try-catch
+                    // Look for "}});" pattern which typically ends the function
+                    if let Ok(end_pattern) = Regex::new(r"\}\}\);") {
+                        if let Some(end_match) = end_pattern.find(remaining) {
+                            let pos = search_forward_start + end_match.end();
+                            println!("✅ Injecting after try-catch block at position: {}", pos);
+                            pos
+                        } else {
+                            println!("⚠️  Could not find try-catch end, using fallback");
+                            return Err("Could not find try-catch block end".into());
+                        }
+                    } else {
+                        println!("⚠️  Regex error, using fallback");
+                        return Err("Regex compilation failed".into());
+                    }
                 } else {
-                    println!("⚠️  No semicolon found, injecting right after {}()", init_func_name);
-                    search_start
+                    println!("⚠️  Could not find try block, using fallback");
+                    return Err("Could not find try block".into());
                 }
             } else {
                 println!("⚠️  Could not find {}() call, using fallback", init_func_name);

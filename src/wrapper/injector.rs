@@ -114,6 +114,11 @@ impl ClaudeCodeInjector {
             cmd.env("BYEBYECODE_WRAPPER", "1");
             cmd.env("BYEBYECODE_VERSION", env!("CARGO_PKG_VERSION"));
 
+            // Inherit stdin/stdout/stderr for interactive use
+            cmd.stdin(Stdio::inherit())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit());
+
             let status = cmd.status()?;
 
             if !status.success() {

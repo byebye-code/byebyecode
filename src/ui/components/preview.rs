@@ -195,18 +195,20 @@ impl PreviewComponent {
                     },
                 },
                 SegmentId::ByeByeCodeSubscription => SegmentData {
-                    primary: "\x1b[38;5;46m88code正持续为您服务\x1b[0m".to_string(),
+                    primary: "Pro ¥99/月 (可重置3次, 剩余30天)".to_string(),
                     secondary: "".to_string(),
                     metadata: {
                         let mut map = HashMap::new();
-                        map.insert("plan".to_string(), "Pro".to_string());
-                        map.insert("price".to_string(), "¥99/月".to_string());
-                        map.insert("active".to_string(), "true".to_string());
+                        map.insert("plan_0".to_string(), "Pro".to_string());
+                        map.insert("price_0".to_string(), "¥99/月".to_string());
+                        map.insert("status_0".to_string(), "active".to_string());
+                        map.insert("reset_times_0".to_string(), "3".to_string());
+                        map.insert("remaining_days_0".to_string(), "30".to_string());
                         map
                     },
                 },
                 SegmentId::ByeByeCodeStatus => SegmentData {
-                    primary: "88code正持续为您服务".to_string(),
+                    primary: "".to_string(),
                     secondary: "".to_string(),
                     metadata: HashMap::new(),
                 },

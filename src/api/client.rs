@@ -18,19 +18,38 @@ impl ApiClient {
     }
 
     pub fn get_usage(&self) -> Result<UsageData, Box<dyn std::error::Error>> {
-        let response = self
-            .client
-            .post(&self.config.usage_url)
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
-            .header("Content-Type", "application/json")
-            .send()?;
+        let is_packyapi = self.config.is_packyapi();
+
+        let response = if is_packyapi {
+            self.client
+                .get(&self.config.usage_url)
+                .header("Authorization", format!("Bearer {}", self.config.api_key))
+                .send()?
+        } else {
+            self.client
+                .post(&self.config.usage_url)
+                .header("Authorization", format!("Bearer {}", self.config.api_key))
+                .header("Content-Type", "application/json")
+                .send()?
+        };
 
         if !response.status().is_success() {
             return Err(format!("Usage API request failed: {}", response.status()).into());
         }
 
-        let mut usage: UsageData = response.json()?;
-        usage.calculate(); // 计算使用情况
+        let response_text = response.text()?;
+        
+        let mut usage: UsageData = if is_packyapi {
+            let resp: super::PackyUsageResponse = serde_json::from_str(&response_text)
+                .map_err(|e| format!("Packyapi JSON parse error: {} | Response: {}", e, response_text))?;
+            UsageData::Packy(resp.data)
+        } else {
+            let data: super::Code88UsageData = serde_json::from_str(&response_text)
+                .map_err(|e| format!("API JSON parse error: {} | Response: {}", e, response_text))?;
+            UsageData::Code88(data)
+        };
+
+        usage.calculate();
         Ok(usage)
     }
 
@@ -59,6 +78,6 @@ impl ApiClient {
 
     pub fn check_token_limit(&self) -> Result<bool, Box<dyn std::error::Error>> {
         let usage = self.get_usage()?;
-        Ok(usage.remaining_tokens == 0)
+        Ok(usage.get_remaining_tokens() == 0)
     }
 }

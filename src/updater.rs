@@ -80,7 +80,7 @@ impl UpdateState {
             let config_dir = dirs::home_dir()
                 .unwrap_or_default()
                 .join(".claude")
-                .join("88code");
+                .join("byebyecode");
 
             let state_file = config_dir.join(".update_state.json");
 
@@ -195,7 +195,7 @@ impl UpdateState {
             let config_dir = dirs::home_dir()
                 .unwrap_or_default()
                 .join(".claude")
-                .join("88code");
+                .join("byebyecode");
 
             std::fs::create_dir_all(&config_dir)?;
             let state_file = config_dir.join(".update_state.json");

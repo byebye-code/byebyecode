@@ -54,12 +54,12 @@ impl ConfigLoader {
         Ok(())
     }
 
-    /// Get the themes directory path (~/.claude/88code/themes/)
+    /// Get the themes directory path (~/.claude/byebyecode/themes/)
     pub fn get_themes_path() -> PathBuf {
         if let Some(home) = dirs::home_dir() {
-            home.join(".claude").join("88code").join("themes")
+            home.join(".claude").join("byebyecode").join("themes")
         } else {
-            PathBuf::from(".claude/88code/themes")
+            PathBuf::from(".claude/byebyecode/themes")
         }
     }
 
@@ -133,12 +133,12 @@ impl Config {
         Ok(())
     }
 
-    /// Get the default config file path (~/.claude/88code/config.toml)
+    /// Get the default config file path (~/.claude/byebyecode/config.toml)
     fn get_config_path() -> PathBuf {
         if let Some(home) = dirs::home_dir() {
-            home.join(".claude").join("88code").join("config.toml")
+            home.join(".claude").join("byebyecode").join("config.toml")
         } else {
-            PathBuf::from(".claude/88code/config.toml")
+            PathBuf::from(".claude/byebyecode/config.toml")
         }
     }
 
@@ -146,7 +146,7 @@ impl Config {
     pub fn init() -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::get_config_path();
 
-        // Delete existing 88code directory if it exists
+        // Delete existing byebyecode directory if it exists
         if let Some(parent) = config_path.parent() {
             if parent.exists() {
                 println!("Removing existing directory: {}", parent.display());

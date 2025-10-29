@@ -9,7 +9,7 @@ const CACHE_FRESH_SECONDS: u64 = 300;
 /// 获取缓存文件路径
 fn get_cache_file(cache_type: &str) -> Option<PathBuf> {
     let home = dirs::home_dir()?;
-    let cache_dir = home.join(".claude").join("88code").join("cache");
+    let cache_dir = home.join(".claude").join("byebyecode").join("cache");
 
     // 确保缓存目录存在
     fs::create_dir_all(&cache_dir).ok()?;

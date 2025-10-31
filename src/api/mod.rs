@@ -245,10 +245,7 @@ pub fn get_usage_url_from_claude_settings() -> Option<String> {
     let content = std::fs::read_to_string(settings_path).ok()?;
     let settings = serde_json::from_str::<serde_json::Value>(&content).ok()?;
 
-    let base_url = settings
-        .get("env")?
-        .get("ANTHROPIC_BASE_URL")?
-        .as_str()?;
+    let base_url = settings.get("env")?.get("ANTHROPIC_BASE_URL")?.as_str()?;
 
     if base_url.contains("packyapi.com") {
         Some("https://www.packyapi.com/api/usage/token/".to_string())

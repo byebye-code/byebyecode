@@ -478,26 +478,41 @@ impl ClaudeCodePatcher {
     fn extract_statusline_function_name(&self, _from_pos: usize) -> Option<String> {
         // Strategy 1: Look for the exact pattern with nA()?.statusLine
         // This is the most specific pattern found in current versions
-        let specific_pattern = Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]*nA\(\)\?\.statusLine").ok()?;
+        let specific_pattern =
+            Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]*nA\(\)\?\.statusLine")
+                .ok()?;
         if let Some(capture) = specific_pattern.captures(&self.file_content) {
             let func_name = capture.get(1)?.as_str();
-            println!("🎯 Found statusline function (strategy 1 - nA pattern): {}", func_name);
+            println!(
+                "🎯 Found statusline function (strategy 1 - nA pattern): {}",
+                func_name
+            );
             return Some(func_name.to_string());
         }
 
         // Strategy 2: Look for function that contains both statusLine and Ye1 (hook executor)
-        let hook_pattern = Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]{0,500}statusLine[^}]{0,500}Ye1").ok()?;
+        let hook_pattern = Regex::new(
+            r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]{0,500}statusLine[^}]{0,500}Ye1",
+        )
+        .ok()?;
         if let Some(capture) = hook_pattern.captures(&self.file_content) {
             let func_name = capture.get(1)?.as_str();
-            println!("🎯 Found statusline function (strategy 2 - hook pattern): {}", func_name);
+            println!(
+                "🎯 Found statusline function (strategy 2 - hook pattern): {}",
+                func_name
+            );
             return Some(func_name.to_string());
         }
 
         // Strategy 3: Original pattern - function with statusLine close to definition
-        let pattern = Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]{0,200}statusLine").ok()?;
+        let pattern =
+            Regex::new(r"async function ([a-zA-Z0-9_]+)\([^)]*\)\{[^}]{0,200}statusLine").ok()?;
         if let Some(capture) = pattern.captures(&self.file_content) {
             let func_name = capture.get(1)?.as_str();
-            println!("🎯 Found statusline function (strategy 3 - close proximity): {}", func_name);
+            println!(
+                "🎯 Found statusline function (strategy 3 - close proximity): {}",
+                func_name
+            );
             return Some(func_name.to_string());
         }
 
@@ -514,7 +529,10 @@ impl ClaudeCodePatcher {
 
                 if let Some(capture) = last_match {
                     let func_name = capture.get(1)?.as_str();
-                    println!("🎯 Found statusline function (strategy 4 - last async func): {}", func_name);
+                    println!(
+                        "🎯 Found statusline function (strategy 4 - last async func): {}",
+                        func_name
+                    );
                     return Some(func_name.to_string());
                 }
             }
@@ -526,17 +544,24 @@ impl ClaudeCodePatcher {
 
     /// Add auto-refresh interval for statusline
     /// Injects a setInterval that periodically refreshes the statusline display
-    pub fn add_statusline_refresh_interval(&mut self, interval_ms: u32) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn add_statusline_refresh_interval(
+        &mut self,
+        interval_ms: u32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Check if already patched
-        if self.file_content.contains("setInterval(function(){try{") &&
-           (self.file_content.contains("VZA({})") || self.file_content.contains("refreshStatusLine")) {
+        if self.file_content.contains("setInterval(function(){try{")
+            && (self.file_content.contains("VZA({})")
+                || self.file_content.contains("refreshStatusLine"))
+        {
             println!("⚠️  Statusline auto-refresh already patched, skipping...");
             return Ok(());
         }
 
         // BEST STRATEGY: Inject after signal handler initialization
         // Find the function that sets up SIGINT and SIGTERM handlers, then find where it's called
-        let injection_pos = if let Some(init_func_name) = self.extract_signal_handler_init_function() {
+        let injection_pos = if let Some(init_func_name) =
+            self.extract_signal_handler_init_function()
+        {
             println!("✅ Found signal handler init function: {}", init_func_name);
 
             // Now find where this function is called
@@ -548,16 +573,16 @@ impl ClaudeCodePatcher {
                 // Look backward to find 'try{'
                 let search_back_start = call_pos.saturating_sub(500);
                 let before_text = &self.file_content[search_back_start..call_pos];
-                
+
                 if let Some(try_offset) = before_text.rfind("try{") {
                     let try_pos = search_back_start + try_offset;
                     println!("✅ Found try block at position: {}", try_pos);
-                    
+
                     // Now find the end of the try-catch block
                     // Look for pattern: }catch(...){...}
                     let search_forward_start = call_pos;
                     let remaining = &self.file_content[search_forward_start..];
-                    
+
                     // Find the matching closing brace for the try-catch
                     // Look for "}});" pattern which typically ends the function
                     if let Ok(end_pattern) = Regex::new(r"\}\}\);") {
@@ -578,7 +603,10 @@ impl ClaudeCodePatcher {
                     return Err("Could not find try block".into());
                 }
             } else {
-                println!("⚠️  Could not find {}() call, using fallback", init_func_name);
+                println!(
+                    "⚠️  Could not find {}() call, using fallback",
+                    init_func_name
+                );
                 return Err("Could not find signal handler init call".into());
             }
         } else if let Some(location) = self.find_statusline_execution_location() {
@@ -589,11 +617,7 @@ impl ClaudeCodePatcher {
             // Strategy 3: Fallback to general initialization patterns
             println!("⚠ Using fallback injection strategy");
 
-            let init_patterns = vec![
-                "process.on(\"SIGINT\"",
-                "process.on(\"exit\"",
-                ".render();",
-            ];
+            let init_patterns = vec!["process.on(\"SIGINT\"", "process.on(\"exit\"", ".render();"];
 
             let mut injection_point = None;
 
@@ -604,7 +628,11 @@ impl ClaudeCodePatcher {
 
                     if let Some(semicolon_offset) = remaining.find(';') {
                         injection_point = Some(search_start + semicolon_offset + 1);
-                        println!("Found injection point after: {} at position {}", pattern, injection_point.unwrap());
+                        println!(
+                            "Found injection point after: {} at position {}",
+                            pattern,
+                            injection_point.unwrap()
+                        );
                         break;
                     }
                 }
@@ -616,7 +644,9 @@ impl ClaudeCodePatcher {
         // Create the refresh interval code
         // Strategy: Find the statusline execution function and call it periodically
         // Look for the function that was just defined (likely contains statusLine)
-        let refresh_code = if let Some(func_name) = self.extract_statusline_function_name(injection_pos) {
+        let refresh_code = if let Some(func_name) =
+            self.extract_statusline_function_name(injection_pos)
+        {
             // Call the discovered function with empty object as parameter
             format!(
                 "setInterval(function(){{try{{{}({{}})}}catch(e){{}}}},{});",
@@ -639,7 +669,10 @@ impl ClaudeCodePatcher {
         let context_end = (injection_pos + 100).min(self.file_content.len());
 
         println!("\n--- Injection Context ---");
-        println!("BEFORE: {}", &self.file_content[context_start..injection_pos]);
+        println!(
+            "BEFORE: {}",
+            &self.file_content[context_start..injection_pos]
+        );
         println!(">>> INJECT: \x1b[32m{}\x1b[0m", refresh_code);
         println!("AFTER: {}", &self.file_content[injection_pos..context_end]);
         println!("--- End Context ---\n");

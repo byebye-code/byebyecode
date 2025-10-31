@@ -75,7 +75,7 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     metadata.insert("used".to_string(), format!("{:.2}", used_dollars));
     metadata.insert("total".to_string(), format!("{:.2}", total_dollars));
     metadata.insert("remaining".to_string(), format!("{:.2}", remaining_dollars));
-    
+
     // 根据 usage_url 判断是哪个服务，并设置动态图标
     let service_name = if usage_url.contains("packyapi.com") {
         "packy"

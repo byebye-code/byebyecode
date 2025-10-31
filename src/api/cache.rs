@@ -36,7 +36,10 @@ fn read_cache<T: serde::de::DeserializeOwned>(cache_file: &PathBuf) -> Option<T>
 }
 
 /// 保存缓存文件（覆盖旧缓存）
-fn save_cache<T: serde::Serialize>(cache_file: &PathBuf, data: &T) -> Result<(), Box<dyn std::error::Error>> {
+fn save_cache<T: serde::Serialize>(
+    cache_file: &PathBuf,
+    data: &T,
+) -> Result<(), Box<dyn std::error::Error>> {
     let json = serde_json::to_string(data)?;
     fs::write(cache_file, json)?;
     Ok(())
@@ -68,7 +71,9 @@ pub fn get_cached_subscriptions() -> (Option<Vec<SubscriptionData>>, bool) {
 }
 
 /// 保存订阅数据到缓存（覆盖旧缓存）
-pub fn save_cached_subscriptions(data: &Vec<SubscriptionData>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn save_cached_subscriptions(
+    data: &Vec<SubscriptionData>,
+) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(cache_file) = get_cache_file("subscriptions") {
         save_cache(&cache_file, data)?;
     }

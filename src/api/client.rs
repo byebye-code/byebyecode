@@ -38,14 +38,21 @@ impl ApiClient {
         }
 
         let response_text = response.text()?;
-        
+
         let mut usage: UsageData = if is_packyapi {
-            let resp: super::PackyUsageResponse = serde_json::from_str(&response_text)
-                .map_err(|e| format!("Packyapi JSON parse error: {} | Response: {}", e, response_text))?;
+            let resp: super::PackyUsageResponse =
+                serde_json::from_str(&response_text).map_err(|e| {
+                    format!(
+                        "Packyapi JSON parse error: {} | Response: {}",
+                        e, response_text
+                    )
+                })?;
             UsageData::Packy(resp.data)
         } else {
-            let data: super::Code88UsageData = serde_json::from_str(&response_text)
-                .map_err(|e| format!("API JSON parse error: {} | Response: {}", e, response_text))?;
+            let data: super::Code88UsageData =
+                serde_json::from_str(&response_text).map_err(|e| {
+                    format!("API JSON parse error: {} | Response: {}", e, response_text)
+                })?;
             UsageData::Code88(data)
         };
 

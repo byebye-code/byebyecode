@@ -200,7 +200,10 @@ fn run_wrapper_mode(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
 
     // Load API keys from config
     let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    let keys_path = home.join(".claude").join("byebyecode").join("api_keys.toml");
+    let keys_path = home
+        .join(".claude")
+        .join("byebyecode")
+        .join("api_keys.toml");
 
     let (_api_key, glm_key) = if keys_path.exists() {
         use serde::Deserialize;
@@ -268,7 +271,7 @@ fn migrate_legacy_config() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(home) = dirs::home_dir() {
         let old_dir = home.join(".claude").join("88code");
         let new_dir = home.join(".claude").join("byebyecode");
-        
+
         if old_dir.exists() && !new_dir.exists() {
             std::fs::rename(&old_dir, &new_dir)?;
             println!("✓ 已自动迁移配置目录: ~/.claude/88code → ~/.claude/byebyecode");

@@ -12,6 +12,15 @@ pub struct ApiConfig {
     pub subscription_url: String,
 }
 
+/// 后端统一响应包装器
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ResponseDTO<T> {
+    pub code: i32,
+    pub ok: bool,
+    pub msg: String,
+    pub data: T,
+}
+
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {

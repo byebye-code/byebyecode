@@ -49,11 +49,12 @@ impl ApiClient {
                 })?;
             UsageData::Packy(resp.data)
         } else {
-            let data: super::Code88UsageData =
+            // 解析 ResponseDTO 包装的响应
+            let resp: super::ResponseDTO<super::Code88UsageData> =
                 serde_json::from_str(&response_text).map_err(|e| {
                     format!("API JSON parse error: {} | Response: {}", e, response_text)
                 })?;
-            UsageData::Code88(data)
+            UsageData::Code88(resp.data)
         };
 
         usage.calculate();
@@ -72,8 +73,18 @@ impl ApiClient {
             return Err(format!("Subscription API request failed: {}", response.status()).into());
         }
 
-        // API返回的是数组,返回所有订阅
-        let mut subscriptions: Vec<SubscriptionData> = response.json()?;
+        let response_text = response.text()?;
+
+        // 解析 ResponseDTO 包装的响应
+        let resp: super::ResponseDTO<Vec<SubscriptionData>> = serde_json::from_str(&response_text)
+            .map_err(|e| {
+                format!(
+                    "Subscription JSON parse error: {} | Response: {}",
+                    e, response_text
+                )
+            })?;
+
+        let mut subscriptions = resp.data;
 
         // 格式化每个订阅的显示数据
         for subscription in &mut subscriptions {

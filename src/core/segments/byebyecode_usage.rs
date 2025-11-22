@@ -76,15 +76,6 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     metadata.insert("total".to_string(), format!("{:.2}", total_dollars));
     metadata.insert("remaining".to_string(), format!("{:.2}", remaining_dollars));
 
-    // 根据 usage_url 判断是哪个服务，并设置动态图标
-    let service_name = if usage_url.contains("packyapi.com") {
-        "packy"
-    } else {
-        "88code"
-    };
-    metadata.insert("service".to_string(), service_name.to_string());
-    metadata.insert("dynamic_icon".to_string(), service_name.to_string());
-
     // 检查额度是否用完（包括超额使用）
     if usage.is_exhausted() {
         // 实时获取订阅信息

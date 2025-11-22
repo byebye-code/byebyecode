@@ -215,11 +215,7 @@ impl StatusLineGenerator {
     }
 
     fn render_segment(&self, config: &SegmentConfig, data: &SegmentData) -> String {
-        let icon = if let Some(dynamic_icon) = data.metadata.get("dynamic_icon") {
-            dynamic_icon.clone()
-        } else {
-            self.get_icon(config)
-        };
+        let icon = self.get_icon(config);
 
         // Apply background color to the entire segment if set
         if let Some(bg_color) = &config.colors.background {

@@ -161,6 +161,45 @@ byebyecode 支持通过 TOML 文件和交互式 TUI 进行完整配置：
 支持的段落：目录、Git、模型、使用量、时间、成本、输出样式
 
 
+## 常见问题 (Troubleshooting)
+
+### Error: Binary not found
+
+如果你在安装后运行遇到 `Binary not found` 错误，通常是因为 npm/pnpm 的路径解析问题或网络下载失败。
+
+**解决方案 1：强制重新安装**
+
+```bash
+# npm
+npm install -g @88code/byebyecode --force
+
+# pnpm
+pnpm add -g @88code/byebyecode --shamefully-hoist
+```
+
+**解决方案 2：手动安装二进制文件（推荐）**
+
+如果自动安装持续失败，你可以手动下载二进制文件：
+
+1. 访问 [Releases 页面](https://github.com/byebye-code/byebyecode/releases) 下载对应平台的压缩包（例如 `byebyecode-macos-x64.tar.gz`）。
+2. 解压并获取 `byebyecode` 可执行文件。
+3. 将文件放置到以下目录：
+   - macOS/Linux: `~/.claude/byebyecode/byebyecode`
+   - Windows: `%USERPROFILE%\.claude\byebyecode\byebyecode.exe`
+4. 赋予执行权限 (macOS/Linux):
+   ```bash
+   chmod +x ~/.claude/byebyecode/byebyecode
+   ```
+5. 再次运行 `byebyecode`。
+
+### macOS 编译错误 (ring crate)
+
+如果你尝试从源码编译并遇到 `ring` 相关的错误（如 `could not find ar`），请确保已安装 Xcode Command Line Tools：
+
+```bash
+xcode-select --install
+```
+
 ## 系统要求
 
 - **Git**: 版本 1.5+ (推荐 Git 2.22+ 以获得更好的分支检测)

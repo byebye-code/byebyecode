@@ -234,6 +234,10 @@ impl UpdateState {
     }
 }
 
+// Note: Auto-update is now handled by the npm wrapper script (byebyecode.js)
+// It checks npm registry and runs `npm install -g @88code/byebyecode@latest`
+// This function is kept for future use if needed
+
 /// GitHub Release API response structures
 #[cfg(feature = "self-update")]
 pub mod github {
@@ -350,12 +354,12 @@ pub mod github {
 
     /// Check for updates from GitHub Releases API
     pub fn check_for_updates() -> Result<Option<GitHubRelease>, Box<dyn std::error::Error>> {
-        let url = "https://api.github.com/repos/Haleclipse/CCometixLine/releases/latest";
+        let url = "https://api.github.com/repos/byebyecode/byebyecode/releases/latest";
 
         let response = ureq::get(url)
             .set(
                 "User-Agent",
-                &format!("CCometixLine/{}", env!("CARGO_PKG_VERSION")),
+                &format!("byebyecode/{}", env!("CARGO_PKG_VERSION")),
             )
             .call()?;
 

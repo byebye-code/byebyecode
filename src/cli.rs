@@ -34,18 +34,6 @@ pub struct Cli {
     /// Patch Claude Code cli.js to disable context warnings
     #[arg(long = "patch")]
     pub patch: Option<String>,
-
-    /// Start byebyecode wrapper mode (inject into Claude Code)
-    #[arg(long = "wrap")]
-    pub wrap: bool,
-
-    /// Enable/disable translation feature
-    #[arg(long = "translation")]
-    pub translation: Option<bool>,
-
-    /// Set GLM API key for translation
-    #[arg(long = "glm-key")]
-    pub glm_key: Option<String>,
 }
 
 impl Cli {

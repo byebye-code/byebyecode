@@ -2,8 +2,6 @@ use byebyecode::auto_config::AutoConfigurator;
 use byebyecode::cli::Cli;
 use byebyecode::config::{Config, InputData};
 use byebyecode::core::{collect_all_segments, StatusLineGenerator};
-use byebyecode::translation::TranslationConfig;
-use byebyecode::wrapper::{find_claude_code, injector::ClaudeCodeInjector};
 use std::io::{self, IsTerminal};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,21 +9,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     migrate_legacy_config()?;
 
     let cli = Cli::parse_args();
-
-    // Handle wrapper mode - inject into Claude Code
-    if cli.wrap {
-        return run_wrapper_mode(&cli);
-    }
-
-    // Handle auto-configuration
-    if cli.glm_key.is_some() {
-        let configurator = AutoConfigurator::new()?;
-        configurator.setup_byebyecode(None, cli.glm_key.clone())?;
-        configurator.install_binary()?;
-        println!("\n✓ byebyecode 自动配置完成!");
-        println!("  使用 'byebyecode --wrap' 启动包装模式");
-        return Ok(());
-    }
 
     // Handle configuration commands
     if cli.init {
@@ -188,83 +171,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let generator = StatusLineGenerator::new(config);
     let statusline = generator.generate(segments_data);
 
+    // Output statusline first (critical for Claude Code)
     println!("{}", statusline);
 
     Ok(())
-}
-
-fn run_wrapper_mode(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
-    // Find Claude Code executable
-    let claude_path = find_claude_code()?;
-    println!("✓ Found Claude Code at: {}", claude_path.display());
-
-    // Load API keys from config
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
-    let keys_path = home
-        .join(".claude")
-        .join("byebyecode")
-        .join("api_keys.toml");
-
-    let (_api_key, glm_key) = if keys_path.exists() {
-        use serde::Deserialize;
-
-        #[derive(Deserialize)]
-        struct ApiKeys {
-            #[serde(default)]
-            byebyecode_api_key: Option<String>,
-            #[serde(default)]
-            glm_api_key: Option<String>,
-        }
-
-        let content = std::fs::read_to_string(&keys_path)?;
-        let keys: ApiKeys = toml::from_str(&content)?;
-        (keys.byebyecode_api_key, keys.glm_api_key)
-    } else {
-        (None, None)
-    };
-
-    // Use keys from config (no CLI override for api_key)
-    let final_glm_key = cli.glm_key.clone().or(glm_key);
-
-    // Setup translation config
-    let translation_config = if cli.translation.unwrap_or(true) {
-        if let Some(glm_key) = final_glm_key {
-            Some(TranslationConfig {
-                enabled: true,
-                api_key: glm_key,
-                ..Default::default()
-            })
-        } else {
-            println!("⚠️  翻译功能需要 GLM API Key. 使用 --glm-key 设置");
-            None
-        }
-    } else {
-        None
-    };
-
-    // Store whether translation is enabled for later display
-    let translation_enabled = translation_config.is_some();
-
-    // Create and run injector
-    let mut injector = ClaudeCodeInjector::new(claude_path, translation_config)?;
-
-    // Get remaining args to pass to Claude Code
-    let claude_args: Vec<String> = std::env::args()
-        .skip(1)
-        .filter(|arg| arg != "--wrap")
-        .collect();
-
-    println!("\n🚀 启动 Claude Code...");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("🎯 88code wrapper 已激活");
-    if translation_enabled {
-        println!("🌐 翻译功能: 已启用");
-    } else {
-        println!("🌐 翻译功能: 未启用 (使用 --glm-key 设置)");
-    }
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
-    injector.run_with_interception(claude_args)
 }
 
 fn migrate_legacy_config() -> Result<(), Box<dyn std::error::Error>> {

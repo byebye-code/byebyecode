@@ -28,7 +28,6 @@ impl AutoConfigurator {
     pub fn setup_byebyecode(
         &self,
         api_key: Option<String>,
-        glm_key: Option<String>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.ensure_config_dir()?;
 
@@ -111,20 +110,17 @@ impl AutoConfigurator {
         println!("✓ Configuration saved to: {}", config_path.display());
 
         // Save API keys to separate config file
-        if api_key.is_some() || glm_key.is_some() {
+        if api_key.is_some() {
             use serde::{Deserialize, Serialize};
 
             #[derive(Serialize, Deserialize)]
             struct ApiKeys {
                 #[serde(skip_serializing_if = "Option::is_none")]
                 byebyecode_api_key: Option<String>,
-                #[serde(skip_serializing_if = "Option::is_none")]
-                glm_api_key: Option<String>,
             }
 
             let keys = ApiKeys {
                 byebyecode_api_key: api_key,
-                glm_api_key: glm_key,
             };
 
             let keys_path = self.config_dir.join("api_keys.toml");

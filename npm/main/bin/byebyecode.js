@@ -196,6 +196,7 @@ function checkVersionAndNotify() {
     const currentVersion = require(packageJsonPath).version;
 
     // 从 npm registry 获取最新版本
+    // console.error('Checking for updates...'); // Optional: verbose feedback
     const latestVersion = execSync('npm view @88code/byebyecode version', {
       encoding: 'utf8',
       timeout: 5000,
@@ -213,14 +214,14 @@ function checkVersionAndNotify() {
 
       // 创建提示信息
       const notice = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 发现 byebyecode 新版本！
-   当前版本: v${currentVersion}
-   最新版本: v${latestVersion}
+\x1b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m
+\x1b[1m📦 发现 byebyecode 新版本！\x1b[0m
+   当前版本: \x1b[33mv${currentVersion}\x1b[0m
+   最新版本: \x1b[32mv${latestVersion}\x1b[0m
 
-💡 更新将在您下次启动 Claude Code 时自动进行
+\x1b[36m💡 更新将在您启动 Claude Code 时自动进行\x1b[0m
    (或手动运行: npm update -g @88code/byebyecode)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+\x1b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m
       `.trim();
 
       fs.writeFileSync(noticeFile, notice);
@@ -383,6 +384,7 @@ const result = spawnSync(binaryPath, process.argv.slice(2), {
 });
 
 // 步骤 4: 执行完毕后，异步检查版本
-setImmediate(() => checkVersionAndNotify());
+// 步骤 4: 执行完毕后，同步检查版本 (为了确保在进程退出前执行)
+checkVersionAndNotify();
 
 process.exitCode = result.status || 0;

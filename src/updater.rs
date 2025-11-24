@@ -218,14 +218,8 @@ impl UpdateState {
             _ => {}
         }
 
-        // Check time interval (1 hour)
-        if let Some(last_check) = self.last_check {
-            let now = Utc::now();
-            let hours_passed = now.signed_duration_since(last_check).num_hours();
-            hours_passed >= 1
-        } else {
-            true
-        }
+        // Check every time as requested
+        true
     }
 
     #[cfg(not(feature = "self-update"))]

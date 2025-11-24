@@ -181,19 +181,10 @@ function checkVersionAndNotify() {
   const noticeFile = path.join(configDir, '.update_notice');
 
   try {
-    // 频率限制：每小时最多检查一次
-    if (fs.existsSync(versionCheckFile)) {
-      const lastCheck = parseInt(fs.readFileSync(versionCheckFile, 'utf8'));
-      const hoursSinceCheck = (Date.now() - lastCheck) / (1000 * 60 * 60);
-
-      if (hoursSinceCheck < 1) {
-        // 如果已有待更新提示，显示它
-        if (fs.existsSync(noticeFile)) {
-          const notice = fs.readFileSync(noticeFile, 'utf8');
-          console.error(notice);
-        }
-        return;
-      }
+    // 每次都检查，但如果已有提示则显示
+    if (fs.existsSync(noticeFile)) {
+      const notice = fs.readFileSync(noticeFile, 'utf8');
+      console.error(notice);
     }
 
     // 记录检查时间
@@ -331,13 +322,13 @@ const findBinaryPathInNodeModules = () => {
       if (pnpmMatch) {
         const pnpmRoot = pnpmMatch[1];
         const packageNameEncoded = packageName.replace('/', '+');
-        
+
         try {
           // Try to find any version of the package
           const pnpmContents = fs.readdirSync(pnpmRoot);
           const packagePattern = new RegExp(`^${packageNameEncoded.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}@`);
           const matchingPackage = pnpmContents.find(dir => packagePattern.test(dir));
-          
+
           if (matchingPackage) {
             return path.join(pnpmRoot, matchingPackage, 'node_modules', packageName, binaryName);
           }
@@ -381,7 +372,7 @@ if (!binaryPath || !fs.existsSync(binaryPath)) {
   console.error('');
   console.error('3. Manually download the binary from GitHub Releases and place it at:');
   console.error(`   ${globalBinaryPath}`);
-  
+
   process.exit(1);
 }
 
@@ -394,4 +385,4 @@ const result = spawnSync(binaryPath, process.argv.slice(2), {
 // 步骤 4: 执行完毕后，异步检查版本
 setImmediate(() => checkVersionAndNotify());
 
-process.exit(result.status || 0);
+process.exitCode = result.status || 0;

@@ -174,7 +174,7 @@ byebyecode 支持通过 TOML 文件和交互式 TUI 进行完整配置：
 npm install -g @88code/byebyecode --force
 
 # pnpm
-pnpm add -g @88code/byebyecode --shamefully-hoist
+pnpm add -g @88code/byebyecode
 ```
 
 **解决方案 2：手动安装二进制文件（推荐）**

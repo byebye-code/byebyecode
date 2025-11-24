@@ -146,14 +146,14 @@ impl Config {
     pub fn init() -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::get_config_path();
 
-        // Delete existing byebyecode directory if it exists
-        if let Some(parent) = config_path.parent() {
-            if parent.exists() {
-                println!("Removing existing directory: {}", parent.display());
-                fs::remove_dir_all(parent)?;
-                println!("✓ Old configuration cleaned up");
-            }
-        }
+        // Do not remove existing directory to avoid permission errors and data loss
+        // if let Some(parent) = config_path.parent() {
+        //     if parent.exists() {
+        //         println!("Removing existing directory: {}", parent.display());
+        //         fs::remove_dir_all(parent)?;
+        //         println!("✓ Old configuration cleaned up");
+        //     }
+        // }
 
         // Create directory
         if let Some(parent) = config_path.parent() {

@@ -1,4 +1,3 @@
-use byebyecode::auto_config::AutoConfigurator;
 use byebyecode::cli::Cli;
 use byebyecode::config::{Config, InputData};
 use byebyecode::core::{collect_all_segments, StatusLineGenerator};

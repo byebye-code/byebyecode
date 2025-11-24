@@ -302,13 +302,86 @@ if (!packageName) {
 }
 
 const binaryName = platform === 'win32' ? 'byebyecode.exe' : 'byebyecode';
-const binaryPath = path.join(__dirname, '..', 'node_modules', packageName, binaryName);
+// 步骤 3: 确定二进制文件路径
+// 优先级: 
+// 1. ~/.claude/byebyecode/byebyecode (由 postinstall 安装或手动安装)
+// 2. node_modules 中的对应包 (支持 npm/yarn/pnpm)
 
-if (!fs.existsSync(binaryPath)) {
-  console.error(`Error: Binary not found at ${binaryPath}`);
-  console.error('This might indicate a failed installation or unsupported platform.');
-  console.error('请尝试重新安装: npm install -g @88code/byebyecode');
+const globalConfigDir = path.join(os.homedir(), '.claude', 'byebyecode');
+const globalBinaryPath = path.join(globalConfigDir, binaryName);
+
+// 查找二进制文件的辅助函数 (支持 pnpm)
+const findBinaryPathInNodeModules = () => {
+  const possiblePaths = [
+    // npm/yarn: nested in node_modules
+    path.join(__dirname, '..', 'node_modules', packageName, binaryName),
+    // pnpm: try require.resolve first
+    (() => {
+      try {
+        const packagePath = require.resolve(packageName + '/package.json');
+        return path.join(path.dirname(packagePath), binaryName);
+      } catch {
+        return null;
+      }
+    })(),
+    // pnpm: flat structure fallback with version detection
+    (() => {
+      const currentPath = __dirname;
+      const pnpmMatch = currentPath.match(/(.+\.pnpm)[\\/]([^\\//]+)[\\/]/);
+      if (pnpmMatch) {
+        const pnpmRoot = pnpmMatch[1];
+        const packageNameEncoded = packageName.replace('/', '+');
+        
+        try {
+          // Try to find any version of the package
+          const pnpmContents = fs.readdirSync(pnpmRoot);
+          const packagePattern = new RegExp(`^${packageNameEncoded.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}@`);
+          const matchingPackage = pnpmContents.find(dir => packagePattern.test(dir));
+          
+          if (matchingPackage) {
+            return path.join(pnpmRoot, matchingPackage, 'node_modules', packageName, binaryName);
+          }
+        } catch {
+          // Fallback to current behavior if directory reading fails
+        }
+      }
+      return null;
+    })()
+  ].filter(p => p !== null);
+
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      return testPath;
+    }
+  }
+  return null;
+};
+
+let binaryPath;
+
+// 1. 检查全局配置目录
+if (fs.existsSync(globalBinaryPath)) {
+  binaryPath = globalBinaryPath;
+} else {
+  // 2. 检查 node_modules
+  binaryPath = findBinaryPathInNodeModules();
+}
+
+if (!binaryPath || !fs.existsSync(binaryPath)) {
+  console.error(`Error: Binary not found for platform ${platformKey}`);
   console.error(`Expected package: ${packageName}`);
+  console.error(`Expected binary: ${binaryName}`);
+  console.error('');
+  console.error('Troubleshooting:');
+  console.error('1. Try reinstalling with force:');
+  console.error('   npm install -g @88code/byebyecode --force');
+  console.error('');
+  console.error('2. If using pnpm, try installing with --shamefully-hoist:');
+  console.error('   pnpm add -g @88code/byebyecode --shamefully-hoist');
+  console.error('');
+  console.error('3. Manually download the binary from GitHub Releases and place it at:');
+  console.error(`   ${globalBinaryPath}`);
+  
   process.exit(1);
 }
 

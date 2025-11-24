@@ -44,6 +44,36 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         return None;
     }
 
+    // Check if we are using Packy service
+    // Priority:
+    // 1. Current segment options
+    // 2. ByeByeCodeUsage segment options (since users likely configure it there)
+    // 3. Claude settings
+    // 4. Default to 88code
+    let usage_url = segment
+        .options
+        .get("usage_url")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            // Try to find usage_url in ByeByeCodeUsage segment options
+            config
+                .segments
+                .iter()
+                .find(|s| matches!(s.id, crate::config::SegmentId::ByeByeCodeUsage))
+                .and_then(|s| s.options.get("usage_url"))
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+        })
+        .or_else(crate::api::get_usage_url_from_claude_settings)
+        .unwrap_or_else(|| "https://www.88code.org/api/usage".to_string());
+
+    if usage_url.contains("packyapi.com") {
+        return None;
+    }
+
     // Try to get API key from segment options first, then from Claude settings
     let api_key = segment
         .options

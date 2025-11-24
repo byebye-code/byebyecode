@@ -15,6 +15,22 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         return None;
     }
 
+    let usage_url = segment
+        .options
+        .get("usage_url")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .or_else(crate::api::get_usage_url_from_claude_settings)
+        .unwrap_or_else(|| "https://www.88code.org/api/usage".to_string());
+
+    // 根据 usage_url 判断是哪个服务，并设置动态图标
+    let service_name = if usage_url.contains("packyapi.com") {
+        "packy"
+    } else {
+        "88code"
+    };
+
     // Try to get API key from segment options first, then from Claude settings
     let api_key = segment
         .options
@@ -27,22 +43,15 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     let api_key = match api_key {
         Some(key) if !key.is_empty() => key,
         _ => {
+            let mut metadata = HashMap::new();
+            metadata.insert("dynamic_icon".to_string(), service_name.to_string());
             return Some(SegmentData {
                 primary: "未配置密钥".to_string(),
                 secondary: String::new(),
-                metadata: HashMap::new(),
+                metadata,
             });
         }
     };
-
-    let usage_url = segment
-        .options
-        .get("usage_url")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .or_else(crate::api::get_usage_url_from_claude_settings)
-        .unwrap_or_else(|| "https://www.88code.org/api/usage".to_string());
 
     let subscription_url = segment
         .options
@@ -75,13 +84,6 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     metadata.insert("used".to_string(), format!("{:.2}", used_dollars));
     metadata.insert("total".to_string(), format!("{:.2}", total_dollars));
     metadata.insert("remaining".to_string(), format!("{:.2}", remaining_dollars));
-
-    // 根据 usage_url 判断是哪个服务，并设置动态图标
-    let service_name = if usage_url.contains("packyapi.com") {
-        "packy"
-    } else {
-        "88code"
-    };
     metadata.insert("service".to_string(), service_name.to_string());
     metadata.insert("dynamic_icon".to_string(), service_name.to_string());
 

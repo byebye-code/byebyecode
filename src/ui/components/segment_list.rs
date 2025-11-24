@@ -57,7 +57,18 @@ impl SegmentListComponent {
                     SegmentId::Session => "会话",
                     SegmentId::OutputStyle => "输出样式",
                     SegmentId::Update => "更新",
-                    SegmentId::ByeByeCodeUsage => "88code 用量",
+                    SegmentId::ByeByeCodeUsage => {
+                        let usage_url = segment
+                            .options
+                            .get("usage_url")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        if usage_url.contains("packyapi.com") {
+                            "Packy 用量"
+                        } else {
+                            "88code 用量"
+                        }
+                    }
                     SegmentId::ByeByeCodeSubscription => "88code 订阅",
                     SegmentId::ByeByeCodeStatus => "88code 状态",
                 };

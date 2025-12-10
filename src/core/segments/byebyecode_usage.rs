@@ -132,10 +132,22 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         });
     }
 
-    // 正常显示
+    // 正常显示 - 使用进度条可视化
+    let percentage = if total_dollars > 0.0 {
+        (used_dollars / total_dollars * 100.0).clamp(0.0, 100.0)
+    } else {
+        0.0
+    };
+
+    // 生成进度条（10格）
+    let bar_length = 10;
+    let filled = ((percentage / 100.0) * bar_length as f64).round() as usize;
+    let empty = bar_length - filled;
+    let progress_bar = format!("{}{}", "▓".repeat(filled), "░".repeat(empty));
+
     Some(SegmentData {
-        primary: format!("${:.2}/${:.0}", used_dollars, total_dollars),
-        secondary: format!("剩${:.2}", remaining_dollars),
+        primary: format!("${:.2}/${:.0} {}", used_dollars, total_dollars, progress_bar),
+        secondary: String::new(),
         metadata,
     })
 }

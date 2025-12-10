@@ -4,6 +4,23 @@ use crate::config::InputData;
 use crate::core::segments::SegmentData;
 use std::collections::HashMap;
 
+/// ANSI 重置代码
+const RESET: &str = "\x1b[0m";
+
+/// 根据百分比获取状态色（ANSI 256色）
+/// - 0-50%: 绿色 (充足)
+/// - 50-80%: 黄色 (注意)
+/// - 80%+: 红色 (紧急)
+fn get_status_color(percentage: f64) -> &'static str {
+    if percentage <= 50.0 {
+        "\x1b[38;5;46m" // 亮绿色 (256色 #46)
+    } else if percentage <= 80.0 {
+        "\x1b[38;5;226m" // 亮黄色 (256色 #226)
+    } else {
+        "\x1b[38;5;196m" // 亮红色 (256色 #196)
+    }
+}
+
 pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     // Get API config from segment options
     let segment = config
@@ -143,11 +160,20 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         0.0
     };
 
-    // 生成进度条（10格）
+    // 生成进度条（10格）+ 状态色
     let bar_length = 10;
     let filled = ((percentage / 100.0) * bar_length as f64).round() as usize;
     let empty = bar_length - filled;
-    let progress_bar = format!("{}{}", "▓".repeat(filled), "░".repeat(empty));
+
+    // 根据百分比获取状态色
+    let status_color = get_status_color(percentage);
+    let progress_bar = format!(
+        "{}{}{}{}",
+        status_color,
+        "▓".repeat(filled),
+        "░".repeat(empty),
+        RESET
+    );
 
     Some(SegmentData {
         primary: format!(

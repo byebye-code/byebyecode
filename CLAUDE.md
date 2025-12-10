@@ -8,6 +8,39 @@ ByeByeCode 是一个 Rust 编写的 Claude Code 状态栏增强工具，用于�
 - **语言**: Rust
 - **用途**: Claude Code 状态栏插件
 
+## Git 分支说明
+
+### 远程仓库
+
+| 远程名 | 地址 | 说明 |
+|--------|------|------|
+| `origin` | https://github.com/johnnyee/byebyecode | Fork 仓库（个人开发用） |
+| `upstream` | https://github.com/byebye-code/byebyecode | 上游官方仓库 |
+
+### 分支列表
+
+| 分支名 | 用途 | 对应 PR | 状态 |
+|--------|------|---------|------|
+| `main` | 主分支 | - | ✅ 活跃 |
+| `fix/issue-9-subscription-usage-display` | Issue #9 修复 | PR #10 | ✅ 已合并 |
+| `feature/progress-bar-usage-display` | 进度条功能 | PR #11 | ✅ 已合并 |
+| `fix/skip-free-subscription` | 跳过 FREE 套餐 | PR #12 | ✅ 已合并 |
+
+### 分支工作流
+
+```bash
+# 同步上游代码
+git fetch upstream
+git checkout main
+git merge upstream/main
+
+# 创建功能分支
+git checkout -b feature/xxx
+
+# 提交 PR 后合并，删除本地分支
+git branch -d feature/xxx
+```
+
 ## 项目结构
 
 ```

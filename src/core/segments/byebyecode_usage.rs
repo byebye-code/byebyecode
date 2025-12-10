@@ -1,4 +1,4 @@
-use crate::api::{client::ApiClient, ApiConfig};
+use crate::api::{cache, client::ApiClient, ApiConfig};
 use crate::config::Config;
 use crate::config::InputData;
 use crate::core::segments::SegmentData;
@@ -79,12 +79,33 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
 
     // 从输入数据获取当前使用的模型
     let model_id = &input.model.id;
-    let usage = fetch_usage_sync(&api_key, &usage_url, Some(model_id))?;
 
-    fn fetch_usage_sync(
+    // 优先使用缓存，API 失败时降级
+    let usage = fetch_usage_with_cache(&api_key, &usage_url, Some(model_id), service_name);
+
+    let usage = match usage {
+        Some(u) => u,
+        None => {
+            // 完全没有数据，显示加载中
+            let mut metadata = HashMap::new();
+            metadata.insert("dynamic_icon".to_string(), service_name.to_string());
+            return Some(SegmentData {
+                primary: "⏳ 获取中...".to_string(),
+                secondary: String::new(),
+                metadata,
+            });
+        }
+    };
+
+    /// 带缓存的用量获取
+    /// 1. 尝试从 API 获取最新数据
+    /// 2. 成功则更新缓存并返回
+    /// 3. 失败则尝试使用缓存降级
+    fn fetch_usage_with_cache(
         api_key: &str,
         usage_url: &str,
         model: Option<&str>,
+        _service_name: &str,
     ) -> Option<crate::api::UsageData> {
         let api_config = ApiConfig {
             enabled: true,
@@ -93,9 +114,18 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
             subscription_url: String::new(),
         };
 
-        let client = ApiClient::new(api_config).ok()?;
-        let usage = client.get_usage(model).ok()?;
-        Some(usage)
+        // 尝试从 API 获取
+        if let Ok(client) = ApiClient::new(api_config) {
+            if let Ok(usage) = client.get_usage(model) {
+                // API 成功，保存缓存
+                let _ = cache::save_cached_usage(&usage);
+                return Some(usage);
+            }
+        }
+
+        // API 失败，尝试使用缓存降级
+        let (cached, _) = cache::get_cached_usage();
+        cached
     }
 
     // 处理使用数据

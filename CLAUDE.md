@@ -68,6 +68,98 @@ cargo build --release
 ```
 3. 重启 Claude Code
 
+## 状态栏段（Segments）配置
+
+byebyecode 支持多个状态栏段，可以根据需要启用或禁用。
+
+### 可用段列表
+
+| 段 ID | 名称 | 说明 |
+|-------|------|------|
+| `model` | 模型 | 显示当前使用的 AI 模型 |
+| `directory` | 目录 | 显示当前工作目录 |
+| `git` | Git | 显示 Git 分支和状态 |
+| `context_window` | 上下文窗口 | 显示上下文窗口使用情况 |
+| `usage` | 用量 | 显示 API 用量（原生） |
+| `cost` | 费用 | 显示会话费用 |
+| `session` | 会话 | 显示会话信息 |
+| `output_style` | 输出样式 | 显示当前输出样式 |
+| `update` | 更新 | 显示更新提示 |
+| `byebyecode_usage` | 88code 用量 | 显示 88code/Packy 套餐用量（带进度条） |
+| `byebyecode_subscription` | 88code 订阅 | 显示所有订阅套餐详情（含重置次数） |
+| `byebyecode_status` | 88code 状态 | 显示 88code 服务状态 |
+
+### 88code 专用段详解
+
+#### `byebyecode_usage` - 用量段
+
+显示当前正在扣费的套餐用量，带进度条可视化：
+
+```
+88code $34.53/$50 ▓▓▓▓▓▓▓░░░
+```
+
+**特性**：
+- 自动跳过 FREE 套餐（FREE 不支持 Claude Code）
+- 额度用完时显示重置提示
+- 支持 88code 和 Packy 两种服务
+
+#### `byebyecode_subscription` - 订阅段
+
+显示所有活跃订阅的详细信息：
+
+```
+订阅 PLUS ¥198/月付 (可重置2次, 剩余53天) | PAYGO ¥66/年付 (剩余989天)
+```
+
+**特性**：
+- 显示所有活跃套餐
+- 包含重置次数、剩余天数
+- 每个套餐有独特的颜色标识
+- 仅支持 88code（Packy 不显示）
+
+### 配置示例
+
+完整配置示例（`~/.claude/settings.json`）：
+
+```json
+{
+  "statusLine": {
+    "command": "byebyecode",
+    "type": "command",
+    "config": {
+      "segments": [
+        { "id": "model", "enabled": true },
+        { "id": "directory", "enabled": true },
+        { "id": "git", "enabled": true },
+        { "id": "context_window", "enabled": true },
+        { "id": "byebyecode_usage", "enabled": true },
+        { "id": "byebyecode_subscription", "enabled": true }
+      ]
+    }
+  }
+}
+```
+
+### 自定义 API 配置
+
+如果需要自定义 API 地址或密钥，可以在段的 `options` 中配置：
+
+```json
+{
+  "id": "byebyecode_usage",
+  "enabled": true,
+  "options": {
+    "api_key": "your-api-key",
+    "usage_url": "https://www.88code.org/api/usage"
+  }
+}
+```
+
+**说明**：
+- 如果不配置 `api_key`，会自动从 `~/.claude/settings.json` 的 `ANTHROPIC_AUTH_TOKEN` 读取
+- 如果不配置 `usage_url`，会根据 `ANTHROPIC_BASE_URL` 自动判断使用 88code 或 Packy
+
 ## 代码规范
 
 ### 格式检查

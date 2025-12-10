@@ -2,32 +2,20 @@ use crate::api::{client::ApiClient, ApiConfig};
 use crate::config::Config;
 use crate::config::InputData;
 use crate::core::segments::SegmentData;
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
 
-/// 生成柔和的随机颜色（基于字符串哈希）
-fn get_soft_color(text: &str) -> String {
-    let mut hasher = DefaultHasher::new();
-    text.hash(&mut hasher);
-    let hash = hasher.finish();
-
-    // 定义一组柔和的颜色（RGB格式）
-    let soft_colors = [
-        (150, 180, 220), // 柔和蓝
-        (180, 150, 200), // 柔和紫
-        (200, 170, 150), // 柔和橙
-        (150, 200, 180), // 柔和青
-        (220, 180, 150), // 柔和棕
-        (180, 200, 150), // 柔和绿
-        (200, 150, 180), // 柔和粉
-        (170, 190, 200), // 柔和灰蓝
-    ];
-
-    let idx = (hash % soft_colors.len() as u64) as usize;
-    let (r, g, b) = soft_colors[idx];
-
-    format!("\x1b[38;2;{};{};{}m", r, g, b)
+/// 根据套餐类型获取语义化颜色
+/// - PLUS/PRO/MAX: 橙色（高级套餐）
+/// - PAYGO: 蓝色（按需套餐）
+/// - FREE: 灰色（免费套餐）
+/// - 其他: 白色
+fn get_plan_color(plan_name: &str) -> &'static str {
+    match plan_name.to_uppercase().as_str() {
+        "PLUS" | "PRO" | "MAX" => "\x1b[38;5;214m", // 橙色
+        "PAYGO" => "\x1b[38;5;39m",                 // 蓝色
+        "FREE" => "\x1b[38;5;245m",                 // 灰色
+        _ => "\x1b[38;5;255m",                      // 白色
+    }
 }
 
 /// ANSI 重置代码
@@ -120,8 +108,16 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         .filter(|sub| sub.is_active && sub.remaining_days > 0)
         .collect();
 
-    // 按剩余天数升序排序（快过期的排在前面）
-    active_subscriptions.sort_by(|a, b| a.remaining_days.cmp(&b.remaining_days));
+    // 排序：FREE 优先，然后按剩余天数升序
+    active_subscriptions.sort_by(|a, b| {
+        let a_is_free = a.plan_name.to_uppercase() == "FREE";
+        let b_is_free = b.plan_name.to_uppercase() == "FREE";
+        match (a_is_free, b_is_free) {
+            (true, false) => std::cmp::Ordering::Less, // FREE 排前面
+            (false, true) => std::cmp::Ordering::Greater, // 非FREE 排后面
+            _ => a.remaining_days.cmp(&b.remaining_days), // 同类型按天数排
+        }
+    });
 
     if active_subscriptions.is_empty() {
         return Some(SegmentData {
@@ -131,31 +127,21 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         });
     }
 
-    // 组合所有订阅信息
+    // 组合所有订阅信息（精简格式）
     let mut subscription_texts = Vec::new();
     let mut metadata = HashMap::new();
 
     for (idx, sub) in active_subscriptions.iter().enumerate() {
-        // 为每个订阅生成基于其计划名的柔和颜色
-        let color = get_soft_color(&sub.plan_name);
+        // 语义化颜色
+        let color = get_plan_color(&sub.plan_name);
 
-        // 精简价格显示：去掉"付"字（月付→月，年付→年）
+        // 精简格式：PLUS ¥198/月 53天
+        // 去掉重置次数，只保留套餐名、价格、剩余天数
         let short_price = sub.plan_price.replace("付", "");
-
-        // 精简格式：PLUS ¥198/月 可重置2次 53天 | PAYGO ¥66/年 989天
-        let subscription_text = if sub.plan_name == "PAYGO" {
-            // PAYGO 不显示重置次数
-            format!(
-                "{}{} {} {}天{}",
-                color, sub.plan_name, short_price, sub.remaining_days, RESET
-            )
-        } else {
-            // 其他套餐显示重置次数
-            format!(
-                "{}{} {} 可重置{}次 {}天{}",
-                color, sub.plan_name, short_price, sub.reset_times, sub.remaining_days, RESET
-            )
-        };
+        let subscription_text = format!(
+            "{}{} {} {}天{}",
+            color, sub.plan_name, short_price, sub.remaining_days, RESET
+        );
         subscription_texts.push(subscription_text);
 
         // 保存元数据

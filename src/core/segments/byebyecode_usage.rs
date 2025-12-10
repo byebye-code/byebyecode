@@ -1,8 +1,25 @@
-use crate::api::{client::ApiClient, ApiConfig};
+use crate::api::{cache, client::ApiClient, ApiConfig};
 use crate::config::Config;
 use crate::config::InputData;
 use crate::core::segments::SegmentData;
 use std::collections::HashMap;
+
+/// ANSI 重置代码
+const RESET: &str = "\x1b[0m";
+
+/// 根据百分比获取状态色（柔和色调）
+/// - 0-50%: 柔和绿 (充足)
+/// - 50-80%: 柔和黄 (注意)
+/// - 80%+: 柔和红 (紧急)
+fn get_status_color(percentage: f64) -> &'static str {
+    if percentage <= 50.0 {
+        "\x1b[38;5;114m" // 柔和绿 (256色 #114)
+    } else if percentage <= 80.0 {
+        "\x1b[38;5;179m" // 柔和黄/橙 (256色 #179)
+    } else {
+        "\x1b[38;5;167m" // 柔和红 (256色 #167)
+    }
+}
 
 pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     // Get API config from segment options
@@ -62,12 +79,33 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
 
     // 从输入数据获取当前使用的模型
     let model_id = &input.model.id;
-    let usage = fetch_usage_sync(&api_key, &usage_url, Some(model_id))?;
 
-    fn fetch_usage_sync(
+    // 优先使用缓存，API 失败时降级
+    let usage = fetch_usage_with_cache(&api_key, &usage_url, Some(model_id), service_name);
+
+    let usage = match usage {
+        Some(u) => u,
+        None => {
+            // 完全没有数据，显示加载中
+            let mut metadata = HashMap::new();
+            metadata.insert("dynamic_icon".to_string(), service_name.to_string());
+            return Some(SegmentData {
+                primary: "⏳ 获取中...".to_string(),
+                secondary: String::new(),
+                metadata,
+            });
+        }
+    };
+
+    /// 带缓存的用量获取
+    /// 1. 尝试从 API 获取最新数据
+    /// 2. 成功则更新缓存并返回
+    /// 3. 失败则尝试使用缓存降级
+    fn fetch_usage_with_cache(
         api_key: &str,
         usage_url: &str,
         model: Option<&str>,
+        _service_name: &str,
     ) -> Option<crate::api::UsageData> {
         let api_config = ApiConfig {
             enabled: true,
@@ -76,9 +114,18 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
             subscription_url: String::new(),
         };
 
-        let client = ApiClient::new(api_config).ok()?;
-        let usage = client.get_usage(model).ok()?;
-        Some(usage)
+        // 尝试从 API 获取
+        if let Ok(client) = ApiClient::new(api_config) {
+            if let Ok(usage) = client.get_usage(model) {
+                // API 成功，保存缓存
+                let _ = cache::save_cached_usage(&usage);
+                return Some(usage);
+            }
+        }
+
+        // API 失败，尝试使用缓存降级
+        let (cached, _) = cache::get_cached_usage();
+        cached
     }
 
     // 处理使用数据
@@ -143,11 +190,20 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         0.0
     };
 
-    // 生成进度条（10格）
+    // 生成进度条（10格）+ 状态色
     let bar_length = 10;
     let filled = ((percentage / 100.0) * bar_length as f64).round() as usize;
     let empty = bar_length - filled;
-    let progress_bar = format!("{}{}", "▓".repeat(filled), "░".repeat(empty));
+
+    // 根据百分比获取状态色
+    let status_color = get_status_color(percentage);
+    let progress_bar = format!(
+        "{}{}{}{}",
+        status_color,
+        "▓".repeat(filled),
+        "░".repeat(empty),
+        RESET
+    );
 
     Some(SegmentData {
         primary: format!(

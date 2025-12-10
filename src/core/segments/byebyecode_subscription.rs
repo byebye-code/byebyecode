@@ -68,7 +68,7 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
                 .map(|s| s.to_string())
         })
         .or_else(crate::api::get_usage_url_from_claude_settings)
-        .unwrap_or_else(|| "https://www.88code.org/api/usage".to_string());
+        .unwrap_or_else(|| "https://www.88code.ai/api/usage".to_string());
 
     if usage_url.contains("packyapi.com") {
         return None;
@@ -114,8 +114,11 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         Some(subs)
     }
 
-    // 过滤掉已禁用的订阅
-    let active_subscriptions: Vec<_> = subscriptions.iter().filter(|sub| sub.is_active).collect();
+    // 过滤掉已禁用的订阅和已过期的订阅（剩余天数 <= 0）
+    let active_subscriptions: Vec<_> = subscriptions
+        .iter()
+        .filter(|sub| sub.is_active && sub.remaining_days > 0)
+        .collect();
 
     if active_subscriptions.is_empty() {
         return Some(SegmentData {
@@ -130,26 +133,24 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     let mut metadata = HashMap::new();
 
     for (idx, sub) in active_subscriptions.iter().enumerate() {
-        // 构建每个订阅的完整信息
-        let expiry_info = if sub.remaining_days >= 0 {
-            format!("剩余{}天", sub.remaining_days)
-        } else {
-            "已过期".to_string()
-        };
-
         // 为每个订阅生成基于其计划名的柔和颜色
         let color = get_soft_color(&sub.plan_name);
 
-        // PAYGO 不显示重置次数，其他订阅显示
+        // 精简价格显示：去掉"付"字（月付→月，年付→年）
+        let short_price = sub.plan_price.replace("付", "");
+
+        // 精简格式：PLUS ¥198/月 可重置2次 53天 | PAYGO ¥66/年 989天
         let subscription_text = if sub.plan_name == "PAYGO" {
+            // PAYGO 不显示重置次数
             format!(
-                "{}{} {} ({}){}",
-                color, sub.plan_name, sub.plan_price, expiry_info, RESET
+                "{}{} {} {}天{}",
+                color, sub.plan_name, short_price, sub.remaining_days, RESET
             )
         } else {
+            // 其他套餐显示重置次数
             format!(
-                "{}{} {} (可重置{}次, {}){}",
-                color, sub.plan_name, sub.plan_price, sub.reset_times, expiry_info, RESET
+                "{}{} {} 可重置{}次 {}天{}",
+                color, sub.plan_name, short_price, sub.reset_times, sub.remaining_days, RESET
             )
         };
         subscription_texts.push(subscription_text);

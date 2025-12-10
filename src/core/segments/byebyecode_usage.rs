@@ -22,7 +22,7 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
         .or_else(crate::api::get_usage_url_from_claude_settings)
-        .unwrap_or_else(|| "https://www.88code.org/api/usage".to_string());
+        .unwrap_or_else(|| "https://www.88code.ai/api/usage".to_string());
 
     // 根据 usage_url 判断是哪个服务，并设置动态图标
     let service_name = if usage_url.contains("packyapi.com") {
@@ -58,7 +58,7 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         .get("subscription_url")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .unwrap_or_else(|| "https://www.88code.org/api/subscription".to_string());
+        .unwrap_or_else(|| "https://www.88code.ai/api/subscription".to_string());
 
     // 从输入数据获取当前使用的模型
     let model_id = &input.model.id;

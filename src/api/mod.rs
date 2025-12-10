@@ -26,8 +26,8 @@ impl Default for ApiConfig {
         Self {
             enabled: false,
             api_key: String::new(),
-            usage_url: "https://www.88code.org/api/usage".to_string(),
-            subscription_url: "https://www.88code.org/api/subscription".to_string(),
+            usage_url: "https://www.88code.ai/api/usage".to_string(),
+            subscription_url: "https://www.88code.ai/api/subscription".to_string(),
         }
     }
 }
@@ -257,7 +257,7 @@ fn get_claude_settings_path() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".claude").join("settings.json"))
 }
 
-/// Read API key from Claude settings.json if base URL is 88code.org or packyapi.com
+/// Read API key from Claude settings.json if base URL is 88code or packyapi
 pub fn get_api_key_from_claude_settings() -> Option<String> {
     let settings_path = get_claude_settings_path()?;
 
@@ -270,9 +270,13 @@ pub fn get_api_key_from_claude_settings() -> Option<String> {
 
     let env = settings.env?;
 
-    // Support both 88code.org and packyapi.com
+    // Support 88code (both .org and .ai), packyapi.com, and rainapp.top (国内线路)
     if let Some(base_url) = env.base_url {
-        if base_url.contains("88code.org") || base_url.contains("packyapi.com") {
+        if base_url.contains("88code.org")
+            || base_url.contains("88code.ai")
+            || base_url.contains("packyapi.com")
+            || base_url.contains("rainapp.top")
+        {
             return env.auth_token;
         }
     }
@@ -295,7 +299,11 @@ pub fn get_usage_url_from_claude_settings() -> Option<String> {
 
     if base_url.contains("packyapi.com") {
         Some("https://www.packyapi.com/api/usage/token/".to_string())
+    } else if base_url.contains("88code.ai") || base_url.contains("rainapp.top") {
+        // 新域名：88code.ai 和国内线路 rainapp.top
+        Some("https://www.88code.ai/api/usage".to_string())
     } else if base_url.contains("88code.org") {
+        // 旧域名兼容
         Some("https://www.88code.org/api/usage".to_string())
     } else {
         None

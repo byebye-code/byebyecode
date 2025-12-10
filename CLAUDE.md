@@ -1,131 +1,204 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# ByeByeCode 项目开发指南
 
 ## 项目概述
 
-byebyecode 是一个基于 Rust 的高性能 Claude Code 状态栏工具，基于 CCometixLine 实现。主要功能包括：
+ByeByeCode 是一个 Rust 编写的 Claude Code 状态栏增强工具，用于显示 88code/Packy 中转站的套餐用量和订阅信息。
 
-- **状态栏生成**：显示 Git 分支状态、模型信息、目录、上下文窗口等
-- **TUI 配置界面**：交互式主题和段落配置
-- **Claude Code 增强**：禁用上下文警告、启用详细模式
-- **API 集成**：88Code 和 ByeByeCode 用量监控
+- **仓库**: https://github.com/byebye-code/byebyecode
+- **语言**: Rust
+- **用途**: Claude Code 状态栏插件
 
-## 开发命令
+## 项目结构
 
-```bash
-# 构建开发版本
-cargo build
+```
+byebyecode/
+├── src/
+│   ├── api/
+│   │   ├── mod.rs          # API 数据结构定义
+│   │   ├── client.rs       # API 客户端实现
+│   │   └── cache.rs        # 缓存管理
+│   ├── core/
+│   │   └── segments/
+│   │       ├── byebyecode_usage.rs        # 用量显示段
+│   │       └── byebyecode_subscription.rs # 订阅显示段
+│   ├── config/             # 配置管理
+│   └── main.rs             # 入口
+├── Cargo.toml              # 项目依赖
+└── npm/                    # npm 发布相关
+```
 
-# 运行测试
-cargo test
+## 构建命令
 
-# 构建发布版本（优化大小）
+### Windows 环境构建
+
+Windows 需要 Visual Studio Build Tools：
+
+```powershell
+# 安装 MSVC Build Tools
+choco install visualstudio2022buildtools visualstudio2022-workload-vctools -y
+
+# 构建
 cargo build --release
-
-# 运行（从 stdin 读取 JSON）
-echo '{"model":"claude-3-5-sonnet","cwd":"/path"}' | cargo run
-
-# 测试 TUI 配置界面
-cargo run -- --config
-
-# 测试初始化配置
-cargo run -- --init
 ```
 
-## 核心架构
-
-### 模块结构
-
-```
-src/
-├── main.rs              # CLI 入口，处理命令行参数和主流程
-├── lib.rs               # 库入口，导出公共模块
-├── cli.rs               # clap 命令行参数定义
-├── core/
-│   ├── statusline.rs    # StatusLineGenerator - 状态栏渲染核心
-│   └── segments/        # 各类段落的数据收集器
-│       ├── mod.rs       # Segment trait 定义
-│       ├── git.rs       # Git 分支/状态段落
-│       ├── model.rs     # 模型名称段落
-│       ├── directory.rs # 目录段落
-│       └── ...          # 其他段落
-├── config/
-│   ├── models.rs        # Config、SegmentConfig 等结构体
-│   ├── types.rs         # InputData、SegmentId 等类型
-│   ├── loader.rs        # TOML 配置加载器
-│   └── defaults.rs      # 默认配置值
-├── ui/
-│   ├── app.rs           # TUI 主应用状态
-│   ├── main_menu.rs     # 主菜单界面
-│   ├── components/      # TUI 组件（编辑器、颜色选择器等）
-│   └── themes/          # 预设主题定义
-├── api/                 # 88Code/ByeByeCode API 客户端
-├── utils/
-│   ├── claude_code_patcher.rs  # cli.js 补丁工具
-│   └── credentials.rs          # 凭证读取
-└── wrapper/             # Claude Code 包装器（查找/启动 Claude）
-```
-
-### 数据流
-
-1. **Claude Code 调用** → stdin 传入 JSON（`InputData`）
-2. **配置加载** → 从 `~/.claude/byebyecode/config.toml` 读取
-3. **段落收集** → 各 `Segment::collect()` 提取数据
-4. **状态栏生成** → `StatusLineGenerator::generate()` 渲染 ANSI 输出
-5. **stdout 输出** → Claude Code 显示状态栏
-
-### 关键类型
-
-- `Config` - 完整配置结构，包含所有段落和样式设置
-- `SegmentConfig` - 单个段落的配置（颜色、图标、启用状态）
-- `SegmentData` - 段落收集的数据（primary/secondary 文本 + metadata）
-- `InputData` - Claude Code 传入的 JSON 数据
-- `StatusLineGenerator` - 状态栏渲染器，处理 ANSI 颜色和分隔符
-
-## Cargo Features
+**注意**: Git 的 `link.exe` 可能与 MSVC 的 `link.exe` 冲突，需要配置 `.cargo/config.toml`：
 
 ```toml
-[features]
-default = ["tui", "self-update", "dirs"]
-tui = ["ratatui", "crossterm", "ansi_term", "ansi-to-tui", "chrono"]  # TUI 界面
-self-update = ["ureq", "semver", "chrono", "dirs"]                    # 自动更新
+[target.x86_64-pc-windows-msvc]
+linker = "D:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe"
 ```
 
-## npm 发布结构
+### Linux/macOS
 
-```
-npm/
-├── main/                # 主包 @88code/byebyecode
-│   ├── package.json
-│   ├── bin/byebyecode.js    # 入口脚本，查找平台二进制
-│   └── scripts/postinstall.js
-└── platforms/           # 各平台二进制包
-    ├── darwin-arm64/
-    ├── darwin-x64/
-    ├── linux-x64/
-    ├── linux-x64-musl/
-    └── win32-x64/
+```bash
+cargo build --release
 ```
 
-## 配置文件位置
+## 本地测试
 
-- 配置目录：`~/.claude/byebyecode/`
-- 主配置：`~/.claude/byebyecode/config.toml`
-- 主题目录：`~/.claude/byebyecode/themes/`
-- 旧配置目录 `~/.claude/88code/` 会自动迁移
+1. 编译项目：`cargo build --release`
+2. 修改 `~/.claude/settings.json`：
+```json
+{
+  "statusLine": {
+    "command": "D:/Dev/OpenSource/byebyecode/target/release/byebyecode.exe",
+    "type": "command"
+  }
+}
+```
+3. 重启 Claude Code
 
-## 添加新段落
+## 代码规范
 
-1. 在 `src/config/types.rs` 的 `SegmentId` 枚举添加新 ID
-2. 在 `src/core/segments/` 创建新段落模块，实现 `Segment` trait
-3. 在 `src/core/segments/mod.rs` 导出新模块
-4. 在 `src/core/statusline.rs` 的 `collect_all_segments()` 添加匹配分支
-5. 在 `src/config/defaults.rs` 添加默认配置
+### 格式检查
 
-## 注意事项
+提交前必须运行 `cargo fmt`，CI 会检查格式：
 
-- 状态栏输出必须是单行，Claude Code 按行解析
-- ANSI 颜色序列需正确闭合（`\x1b[0m` 重置）
-- Powerline 箭头需要 Nerd Font 支持
-- TUI 功能通过 feature flag 控制，可选编译
+```bash
+cargo fmt           # 自动格式化
+cargo fmt -- --check  # 检查格式（CI 使用）
+```
+
+### 函数签名格式
+
+多参数函数需要换行：
+
+```rust
+// 正确
+pub fn get_subscriptions(
+    &self,
+    model: Option<&str>,
+) -> Result<Vec<SubscriptionData>, Box<dyn std::error::Error>> {
+
+// 错误（CI 会失败）
+pub fn get_subscriptions(&self, model: Option<&str>) -> Result<Vec<SubscriptionData>, Box<dyn std::error::Error>> {
+```
+
+## 88code API 说明
+
+### 套餐扣费逻辑
+
+| 套餐 | 支持 Claude Code | 支持 Codex | 扣费顺序 |
+|------|------------------|------------|----------|
+| FREE | ❌ 不支持 | ✅ 支持 | 1️⃣ 最先 |
+| PLUS/PRO/MAX | ✅ 支持 | ✅ 支持 | 2️⃣ 其次 |
+| PAYGO | ✅ 支持 | ✅ 支持 | 3️⃣ 最后 |
+
+### API 接口
+
+- `/api/usage` - 获取用量数据
+- `/api/subscription` - 获取订阅信息
+
+**重要**: 需要传入 `model` 参数才能获取正确套餐的用量，否则 API 默认返回 FREE 套餐数据。
+
+### API 返回结构
+
+```json
+{
+  "creditLimit": 20.0,        // 顶层数据（可能是 FREE）
+  "currentCredits": 20.0,
+  "subscriptionEntityList": [  // 实际套餐数据在这里
+    {
+      "subscriptionName": "FREE",
+      "creditLimit": 20,
+      "currentCredits": 20
+    },
+    {
+      "subscriptionName": "PLUS",
+      "creditLimit": 50,
+      "currentCredits": 45.47   // 正在使用的套餐
+    }
+  ]
+}
+```
+
+## 已完成的功能
+
+### Issue #9 修复 (PR #10, #12)
+
+**问题**: 状态栏始终显示 Free 套餐用量（$0/$20），即使 Plus 套餐正在被扣费。
+
+**解决方案**:
+1. 解析 `subscriptionEntityList` 获取真实套餐数据
+2. Claude Code 环境下跳过 FREE 套餐
+3. 选择第一个有消费的非 FREE 套餐显示
+
+**关键代码** (`src/api/mod.rs`):
+```rust
+let active_subscription = self
+    .subscription_entity_list
+    .iter()
+    .filter(|s| s.is_active)
+    .filter(|s| s.subscription_name.to_uppercase() != "FREE") // 跳过 FREE
+    .find(|s| s.current_credits < s.credit_limit);
+```
+
+### 进度条功能 (PR #11)
+
+用进度条替代冗余的文字显示：
+
+**改进前**: `$13.86/$50 剩$36.13`
+**改进后**: `$13.86/$50 ▓▓▓░░░░░░░`
+
+**关键代码** (`src/core/segments/byebyecode_usage.rs`):
+```rust
+let bar_length = 10;
+let filled = ((percentage / 100.0) * bar_length as f64).round() as usize;
+let empty = bar_length - filled;
+let progress_bar = format!("{}{}", "▓".repeat(filled), "░".repeat(empty));
+```
+
+## PR 提交清单
+
+提交 PR 前确保：
+
+- [ ] `cargo fmt` 格式化代码
+- [ ] `cargo build --release` 编译通过
+- [ ] 本地测试功能正常
+- [ ] 只提交必要的代码文件（不要提交 `.cargo/`、`build.ps1` 等本地配置）
+- [ ] commit message 使用中文描述
+
+## 已提交的 PR
+
+| PR | 状态 | 内容 |
+|----|------|------|
+| #10 | ✅ 已合并 | 修复状态栏错误显示 Free 套餐用量的问题 |
+| #11 | ✅ 已合并 | 用进度条可视化用量显示 |
+| #12 | ✅ 已合并 | Claude Code 环境下跳过 FREE 套餐 |
+
+## 常见问题
+
+### Windows 编译报错 `linking with link.exe failed`
+
+Git 的 `link.exe` 干扰了 MSVC 的 `link.exe`。解决方案：
+
+1. 创建 `.cargo/config.toml` 指定正确的 linker 路径
+2. 或设置 `LIB` 和 `PATH` 环境变量指向 MSVC 工具链
+
+### CI 格式检查失败
+
+运行 `cargo fmt` 后重新提交。
+
+### 状态栏显示 FREE 套餐用量
+
+确保代码包含跳过 FREE 的逻辑（PR #12）。

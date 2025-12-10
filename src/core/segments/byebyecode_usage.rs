@@ -64,7 +64,11 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     let model_id = &input.model.id;
     let usage = fetch_usage_sync(&api_key, &usage_url, Some(model_id))?;
 
-    fn fetch_usage_sync(api_key: &str, usage_url: &str, model: Option<&str>) -> Option<crate::api::UsageData> {
+    fn fetch_usage_sync(
+        api_key: &str,
+        usage_url: &str,
+        model: Option<&str>,
+    ) -> Option<crate::api::UsageData> {
         let api_config = ApiConfig {
             enabled: true,
             api_key: api_key.to_string(),
@@ -146,7 +150,10 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     let progress_bar = format!("{}{}", "▓".repeat(filled), "░".repeat(empty));
 
     Some(SegmentData {
-        primary: format!("${:.2}/${:.0} {}", used_dollars, total_dollars, progress_bar),
+        primary: format!(
+            "${:.2}/${:.0} {}",
+            used_dollars, total_dollars, progress_bar
+        ),
         secondary: String::new(),
         metadata,
     })

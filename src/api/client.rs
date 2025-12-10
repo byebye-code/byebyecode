@@ -68,7 +68,10 @@ impl ApiClient {
         Ok(usage)
     }
 
-    pub fn get_subscriptions(&self, model: Option<&str>) -> Result<Vec<SubscriptionData>, Box<dyn std::error::Error>> {
+    pub fn get_subscriptions(
+        &self,
+        model: Option<&str>,
+    ) -> Result<Vec<SubscriptionData>, Box<dyn std::error::Error>> {
         // 构建请求体，传入 model 参数以获取正确的套餐信息
         // 如果不传 model，API 会默认返回 free 套餐
         let body = match model {

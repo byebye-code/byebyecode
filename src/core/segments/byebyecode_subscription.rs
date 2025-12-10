@@ -99,7 +99,10 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     let model_id = &input.model.id;
     let subscriptions = fetch_subscriptions_sync(&api_key, Some(model_id))?;
 
-    fn fetch_subscriptions_sync(api_key: &str, model: Option<&str>) -> Option<Vec<crate::api::SubscriptionData>> {
+    fn fetch_subscriptions_sync(
+        api_key: &str,
+        model: Option<&str>,
+    ) -> Option<Vec<crate::api::SubscriptionData>> {
         let api_config = ApiConfig {
             enabled: true,
             api_key: api_key.to_string(),

@@ -147,12 +147,14 @@ impl UsageData {
 
 impl Code88UsageData {
     pub fn calculate(&mut self) {
-        // 优先从 subscriptionEntityList 中找到正在扣费的套餐
-        // 判断逻辑：is_active=true 且 currentCredits < creditLimit（已产生消费）
+        // 从 subscriptionEntityList 中找到正在扣费的套餐
+        // Claude Code 环境下跳过 FREE 套餐（FREE 不支持 CC）
+        // 选择第一个有消费（currentCredits < creditLimit）的非 FREE 活跃套餐
         let active_subscription = self
             .subscription_entity_list
             .iter()
             .filter(|s| s.is_active)
+            .filter(|s| s.subscription_name.to_uppercase() != "FREE") // 跳过 FREE
             .find(|s| s.current_credits < s.credit_limit);
 
         // 如果找到正在扣费的套餐，用那个套餐的数据

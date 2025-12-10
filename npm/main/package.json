@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "CCometixLine - High-performance Claude Code StatusLine tool",
   "bin": {
-    "byebyecode": "./bin/byebyecode.js"
+    "byebyecode": "bin/byebyecode.js"
   },
   "scripts": {
     "postinstall": "node scripts/postinstall.js"
@@ -17,9 +17,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/byebye-code/byebyecode"
+    "url": "git+https://github.com/byebye-code/byebyecode.git"
   },
-  "keywords": ["claude", "statusline", "claude-code", "rust", "cli"],
+  "keywords": [
+    "claude",
+    "statusline",
+    "claude-code",
+    "rust",
+    "cli"
+  ],
   "author": "Haleclipse",
   "license": "MIT",
   "engines": {

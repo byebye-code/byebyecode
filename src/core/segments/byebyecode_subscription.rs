@@ -108,8 +108,16 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         .filter(|sub| sub.is_active && sub.remaining_days > 0)
         .collect();
 
-    // 按剩余天数升序排序（快过期的排在前面）
-    active_subscriptions.sort_by(|a, b| a.remaining_days.cmp(&b.remaining_days));
+    // 排序：FREE 优先，然后按剩余天数升序
+    active_subscriptions.sort_by(|a, b| {
+        let a_is_free = a.plan_name.to_uppercase() == "FREE";
+        let b_is_free = b.plan_name.to_uppercase() == "FREE";
+        match (a_is_free, b_is_free) {
+            (true, false) => std::cmp::Ordering::Less, // FREE 排前面
+            (false, true) => std::cmp::Ordering::Greater, // 非FREE 排后面
+            _ => a.remaining_days.cmp(&b.remaining_days), // 同类型按天数排
+        }
+    });
 
     if active_subscriptions.is_empty() {
         return Some(SegmentData {
@@ -127,11 +135,11 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         // 语义化颜色
         let color = get_plan_color(&sub.plan_name);
 
-        // 精简格式：PLUS ¥198/月 53d
+        // 精简格式：PLUS ¥198/月 53天
         // 去掉重置次数，只保留套餐名、价格、剩余天数
         let short_price = sub.plan_price.replace("付", "");
         let subscription_text = format!(
-            "{}{} {} {}d{}",
+            "{}{} {} {}天{}",
             color, sub.plan_name, short_price, sub.remaining_days, RESET
         );
         subscription_texts.push(subscription_text);

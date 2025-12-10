@@ -27,8 +27,9 @@ ByeByeCode 是一个 Rust 编写的 Claude Code 状态栏增强工具，用于�
 | `fix/issue-9-subscription-usage-display` | Issue #9 修复 | PR #10 | ✅ 已合并 |
 | `feature/progress-bar-usage-display` | 进度条功能 | PR #11 | ✅ 已合并 |
 | `fix/skip-free-subscription` | 跳过 FREE 套餐 | PR #12 | ✅ 已合并 |
-| `feature/simplify-subscription-display` | 精简订阅显示格式 | PR #15 | 🔄 待审核 |
-| `feature/support-new-88code-domains` | 支持新域名 88code.ai | PR #16 | 🔄 待审核 |
+| `feature/simplify-subscription-display` | 精简订阅显示格式 | PR #15 | ✅ 已合并 |
+| `feature/support-new-88code-domains` | 支持新域名 88code.ai | PR #16 | ✅ 已合并 |
+| `feature/sort-subscriptions-by-remaining-days` | 按剩余天数排序 | PR #18 | 🔄 待审核 |
 
 ### 分支工作流
 

@@ -68,7 +68,7 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
                 .map(|s| s.to_string())
         })
         .or_else(crate::api::get_usage_url_from_claude_settings)
-        .unwrap_or_else(|| "https://www.88code.org/api/usage".to_string());
+        .unwrap_or_else(|| "https://www.88code.ai/api/usage".to_string());
 
     if usage_url.contains("packyapi.com") {
         return None;

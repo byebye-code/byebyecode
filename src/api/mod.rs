@@ -54,12 +54,29 @@ pub struct Code88UsageData {
     #[serde(rename = "currentCredits")]
     pub current_credits: f64,
 
+    /// 订阅实体列表，包含所有套餐的详细信息
+    #[serde(rename = "subscriptionEntityList", default)]
+    pub subscription_entity_list: Vec<SubscriptionEntity>,
+
     #[serde(default)]
     pub used_tokens: u64,
     #[serde(default)]
     pub remaining_tokens: u64,
     #[serde(default)]
     pub percentage_used: f64,
+}
+
+/// 订阅实体（从 subscriptionEntityList 解析）
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SubscriptionEntity {
+    #[serde(rename = "subscriptionName")]
+    pub subscription_name: String,
+    #[serde(rename = "creditLimit")]
+    pub credit_limit: f64,
+    #[serde(rename = "currentCredits")]
+    pub current_credits: f64,
+    #[serde(rename = "isActive")]
+    pub is_active: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -130,20 +147,38 @@ impl UsageData {
 
 impl Code88UsageData {
     pub fn calculate(&mut self) {
-        let used_credits = self.credit_limit - self.current_credits;
-        self.percentage_used = if self.credit_limit > 0.0 {
-            (used_credits / self.credit_limit * 100.0).clamp(0.0, 100.0)
+        // 优先从 subscriptionEntityList 中找到正在扣费的套餐
+        // 判断逻辑：is_active=true 且 currentCredits < creditLimit（已产生消费）
+        let active_subscription = self
+            .subscription_entity_list
+            .iter()
+            .filter(|s| s.is_active)
+            .find(|s| s.current_credits < s.credit_limit);
+
+        // 如果找到正在扣费的套餐，用那个套餐的数据
+        let (credit_limit, current_credits) = match active_subscription {
+            Some(sub) => (sub.credit_limit, sub.current_credits),
+            None => (self.credit_limit, self.current_credits),
+        };
+
+        let used_credits = credit_limit - current_credits;
+        self.percentage_used = if credit_limit > 0.0 {
+            (used_credits / credit_limit * 100.0).clamp(0.0, 100.0)
         } else {
             0.0
         };
 
         self.used_tokens = (used_credits * 100.0).max(0.0) as u64;
 
-        if self.current_credits < 0.0 {
+        if current_credits < 0.0 {
             self.remaining_tokens = 0;
         } else {
-            self.remaining_tokens = (self.current_credits * 100.0) as u64;
+            self.remaining_tokens = (current_credits * 100.0) as u64;
         }
+
+        // 更新顶层数据为实际使用的套餐数据
+        self.credit_limit = credit_limit;
+        self.current_credits = current_credits;
     }
 
     pub fn is_exhausted(&self) -> bool {

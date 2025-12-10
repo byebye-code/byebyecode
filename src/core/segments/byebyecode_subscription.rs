@@ -33,7 +33,7 @@ fn get_soft_color(text: &str) -> String {
 /// ANSI 重置代码
 const RESET: &str = "\x1b[0m";
 
-pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
+pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     // Get API config from segment options
     let segment = config
         .segments
@@ -95,9 +95,11 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
     };
 
     // 实时获取数据，不使用缓存
-    let subscriptions = fetch_subscriptions_sync(&api_key)?;
+    // 传入 model 参数以获取正确的套餐信息
+    let model_id = &input.model.id;
+    let subscriptions = fetch_subscriptions_sync(&api_key, Some(model_id))?;
 
-    fn fetch_subscriptions_sync(api_key: &str) -> Option<Vec<crate::api::SubscriptionData>> {
+    fn fetch_subscriptions_sync(api_key: &str, model: Option<&str>) -> Option<Vec<crate::api::SubscriptionData>> {
         let api_config = ApiConfig {
             enabled: true,
             api_key: api_key.to_string(),
@@ -105,7 +107,7 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         };
 
         let client = ApiClient::new(api_config).ok()?;
-        let subs = client.get_subscriptions().ok()?;
+        let subs = client.get_subscriptions(model).ok()?;
         Some(subs)
     }
 

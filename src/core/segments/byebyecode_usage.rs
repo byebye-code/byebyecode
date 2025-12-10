@@ -4,7 +4,7 @@ use crate::config::InputData;
 use crate::core::segments::SegmentData;
 use std::collections::HashMap;
 
-pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
+pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     // Get API config from segment options
     let segment = config
         .segments
@@ -60,9 +60,11 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "https://www.88code.org/api/subscription".to_string());
 
-    let usage = fetch_usage_sync(&api_key, &usage_url)?;
+    // 从输入数据获取当前使用的模型
+    let model_id = &input.model.id;
+    let usage = fetch_usage_sync(&api_key, &usage_url, Some(model_id))?;
 
-    fn fetch_usage_sync(api_key: &str, usage_url: &str) -> Option<crate::api::UsageData> {
+    fn fetch_usage_sync(api_key: &str, usage_url: &str, model: Option<&str>) -> Option<crate::api::UsageData> {
         let api_config = ApiConfig {
             enabled: true,
             api_key: api_key.to_string(),
@@ -71,7 +73,7 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
         };
 
         let client = ApiClient::new(api_config).ok()?;
-        let usage = client.get_usage().ok()?;
+        let usage = client.get_usage(model).ok()?;
         Some(usage)
     }
 
@@ -89,8 +91,9 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
 
     // 检查额度是否用完（包括超额使用）
     if usage.is_exhausted() {
-        // 实时获取订阅信息
-        let subscriptions = fetch_subscriptions_sync(&api_key, &subscription_url);
+        // 实时获取订阅信息，传入 model 以获取正确的套餐
+        let model_id = &input.model.id;
+        let subscriptions = fetch_subscriptions_sync(&api_key, &subscription_url, Some(model_id));
 
         if let Some(subs) = subscriptions {
             let active_subs: Vec<_> = subs.iter().filter(|s| s.is_active).collect();
@@ -140,6 +143,7 @@ pub fn collect(config: &Config, _input: &InputData) -> Option<SegmentData> {
 fn fetch_subscriptions_sync(
     api_key: &str,
     subscription_url: &str,
+    model: Option<&str>,
 ) -> Option<Vec<crate::api::SubscriptionData>> {
     let api_config = ApiConfig {
         enabled: true,
@@ -149,6 +153,6 @@ fn fetch_subscriptions_sync(
     };
 
     let client = ApiClient::new(api_config).ok()?;
-    let subs = client.get_subscriptions().ok()?;
+    let subs = client.get_subscriptions(model).ok()?;
     Some(subs)
 }

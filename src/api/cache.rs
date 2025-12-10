@@ -122,7 +122,8 @@ pub fn spawn_background_subscription_update(api_key: String) {
         };
 
         if let Ok(client) = super::client::ApiClient::new(api_config) {
-            if let Ok(subs) = client.get_subscriptions() {
+            // 后台缓存更新时没有 model 信息，传 None
+            if let Ok(subs) = client.get_subscriptions(None) {
                 let _ = save_cached_subscriptions(&subs);
             }
         }
@@ -142,7 +143,8 @@ pub fn spawn_background_usage_update(api_key: String) {
         };
 
         if let Ok(client) = super::client::ApiClient::new(api_config) {
-            if let Ok(usage) = client.get_usage() {
+            // 后台缓存更新时没有 model 信息，传 None
+            if let Ok(usage) = client.get_usage(None) {
                 let _ = save_cached_usage(&usage);
             }
         }

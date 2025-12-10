@@ -17,7 +17,7 @@ impl ApiClient {
         Ok(Self { config, client })
     }
 
-    pub fn get_usage(&self) -> Result<UsageData, Box<dyn std::error::Error>> {
+    pub fn get_usage(&self, model: Option<&str>) -> Result<UsageData, Box<dyn std::error::Error>> {
         let is_packyapi = self.config.is_packyapi();
 
         let response = if is_packyapi {
@@ -26,10 +26,17 @@ impl ApiClient {
                 .header("Authorization", format!("Bearer {}", self.config.api_key))
                 .send()?
         } else {
+            // 构建请求体，传入 model 参数以获取正确套餐的用量
+            // 如果不传 model，API 会默认返回 free 套餐的用量
+            let body = match model {
+                Some(m) => serde_json::json!({ "model": m }),
+                None => serde_json::json!({}),
+            };
             self.client
                 .post(&self.config.usage_url)
                 .header("Authorization", format!("Bearer {}", self.config.api_key))
                 .header("Content-Type", "application/json")
+                .json(&body)
                 .send()?
         };
 
@@ -61,12 +68,20 @@ impl ApiClient {
         Ok(usage)
     }
 
-    pub fn get_subscriptions(&self) -> Result<Vec<SubscriptionData>, Box<dyn std::error::Error>> {
+    pub fn get_subscriptions(&self, model: Option<&str>) -> Result<Vec<SubscriptionData>, Box<dyn std::error::Error>> {
+        // 构建请求体，传入 model 参数以获取正确的套餐信息
+        // 如果不传 model，API 会默认返回 free 套餐
+        let body = match model {
+            Some(m) => serde_json::json!({ "model": m }),
+            None => serde_json::json!({}),
+        };
+
         let response = self
             .client
             .post(&self.config.subscription_url)
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .header("Content-Type", "application/json")
+            .json(&body)
             .send()?;
 
         if !response.status().is_success() {
@@ -95,7 +110,8 @@ impl ApiClient {
     }
 
     pub fn check_token_limit(&self) -> Result<bool, Box<dyn std::error::Error>> {
-        let usage = self.get_usage()?;
+        // 这个方法用于快速检查，没有 model 上下文时传 None
+        let usage = self.get_usage(None)?;
         Ok(usage.get_remaining_tokens() == 0)
     }
 }

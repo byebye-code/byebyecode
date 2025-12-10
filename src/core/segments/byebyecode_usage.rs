@@ -17,7 +17,7 @@ fn get_status_color(percentage: f64) -> &'static str {
     } else if percentage <= 80.0 {
         "\x1b[38;5;179m" // 柔和黄/橙 (256色 #179)
     } else {
-        "\x1b[38;5;174m" // 柔和红/粉 (256色 #174)
+        "\x1b[38;5;167m" // 柔和红 (256色 #167)
     }
 }
 

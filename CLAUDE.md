@@ -1,5 +1,7 @@
 # ByeByeCode 项目开发指南
 
+> ⚠️ **第一优先级规则**：**未经 JohnYe 本人明确同意，严禁向上游仓库（upstream）提交 PR！** 所有代码变更默认只推送到 fork 仓库（origin），需要提交 PR 时必须先询问并获得许可。
+
 ## 项目概述
 
 ByeByeCode 是一个 Rust 编写的 Claude Code 状态栏增强工具，用于显示 88code/Packy 中转站的套餐用量和订阅信息。

@@ -115,10 +115,13 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     }
 
     // 过滤掉已禁用的订阅和已过期的订阅（剩余天数 <= 0）
-    let active_subscriptions: Vec<_> = subscriptions
+    let mut active_subscriptions: Vec<_> = subscriptions
         .iter()
         .filter(|sub| sub.is_active && sub.remaining_days > 0)
         .collect();
+
+    // 按剩余天数升序排序（快过期的排在前面）
+    active_subscriptions.sort_by(|a, b| a.remaining_days.cmp(&b.remaining_days));
 
     if active_subscriptions.is_empty() {
         return Some(SegmentData {

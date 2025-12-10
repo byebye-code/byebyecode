@@ -190,17 +190,37 @@ impl Code88UsageData {
 
 impl PackyUsageData {
     pub fn calculate(&mut self) {
-        self.used_tokens = self.total_used;
-        self.remaining_tokens = self.total_available.saturating_sub(self.total_used);
+        // Packy API 返回的字段含义：
+        // - total_granted: 套餐总额度（积分）
+        // - total_used: 已使用额度（积分）
+        // - total_available: 剩余可用额度（积分）= total_granted - total_used
+        //
+        // 单位转换：Packy 使用 500000 积分 = 1 美元（从用户实际数据推算）
+        // 用户实际：$0.52 余额 + $0.48 已用 = $1.00 总额
+        // API 返回：260425 + 239575 = 500000
+        // 所以：500000 积分 = $1.00，转换因子 = 500000
 
+        const PACKY_CONVERSION_FACTOR: f64 = 500000.0; // 500000 积分 = 1 美元
+
+        // 计算美元金额
+        let used_dollars = self.total_used as f64 / PACKY_CONVERSION_FACTOR;
+        let remaining_dollars = self.total_available as f64 / PACKY_CONVERSION_FACTOR;
+        let total_dollars = self.total_granted as f64 / PACKY_CONVERSION_FACTOR;
+
+        // 转换为 cents（与 88code 统一，因为显示层会除以 100）
+        self.used_tokens = (used_dollars * 100.0) as u64;
+        self.remaining_tokens = (remaining_dollars * 100.0) as u64;
+
+        // 百分比基于 total_granted（套餐总额度）计算
         self.percentage_used = if self.total_granted > 0 {
             (self.total_used as f64 / self.total_granted as f64 * 100.0).clamp(0.0, 100.0)
         } else {
             0.0
         };
 
-        self.credit_limit = (self.total_granted as f64) / 100.0;
-        self.current_credits = (self.remaining_tokens as f64) / 100.0;
+        // 设置美元金额（用于 get_credit_limit 等方法）
+        self.credit_limit = total_dollars;
+        self.current_credits = remaining_dollars;
     }
 
     pub fn is_exhausted(&self) -> bool {

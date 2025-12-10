@@ -2,6 +2,9 @@
 
 ## 88code定制Claude Code 状态栏工具，基于CCometixLine实现
 
+衷心感谢佬的辛勤付出(https://github.com/johnnyee)
+没有佬得的付出，项目就不可持续了
+
 ### 安装命令
 ```bash
 npm install -g @88code/byebyecode

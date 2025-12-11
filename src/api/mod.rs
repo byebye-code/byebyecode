@@ -163,6 +163,14 @@ impl UsageData {
             UsageData::Packy(data) => data.credit_limit,
         }
     }
+
+    /// 判断是否只有 FREE 套餐（仅 88code 支持）
+    pub fn has_only_free(&self) -> bool {
+        match self {
+            UsageData::Code88(data) => data.has_only_free(),
+            UsageData::Packy(_) => false, // Packy 不支持
+        }
+    }
 }
 
 impl Code88UsageData {
@@ -205,6 +213,20 @@ impl Code88UsageData {
 
     pub fn is_exhausted(&self) -> bool {
         self.current_credits <= 0.0
+    }
+
+    /// 判断是否只有 FREE 套餐（没有 PLUS/PRO/MAX）
+    /// 用于判断是否应该显示 PAYGO
+    pub fn has_only_free(&self) -> bool {
+        // 检查 subscriptionEntityList 中是否有 PLUS/PRO/MAX 套餐
+        // 排除 FREE 和 PAYGO
+        !self.subscription_entity_list.iter().any(|s| {
+            if !s.is_active {
+                return false;
+            }
+            let name = s.subscription_name.to_uppercase();
+            name != "FREE" && name != "PAYGO"
+        })
     }
 }
 

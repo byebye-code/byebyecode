@@ -152,6 +152,36 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     metadata.insert("service".to_string(), service_name.to_string());
     metadata.insert("dynamic_icon".to_string(), service_name.to_string());
 
+    // 对于 88code：如果只有 FREE 套餐（没有 PLUS/PRO/MAX），检查是否有 PAYGO 可用
+    // 场景：用户只有 FREE + PAYGO，没有 PLUS
+    // Usage API 不返回 PAYGO，所以 fallback 到 FREE 数据，但 CC 不使用 FREE 额度
+    if service_name == "88code" && usage.has_only_free() {
+        let model_id = &input.model.id;
+        let subscriptions = fetch_subscriptions_sync(&api_key, &subscription_url, Some(model_id));
+
+        if let Some(subs) = subscriptions {
+            // 查找有余额的 PAYGO 套餐
+            let paygo = subs
+                .iter()
+                .filter(|s| s.is_active)
+                .filter(|s| s.plan_name.to_uppercase() == "PAYGO")
+                .find(|s| s.current_credits > 0.0);
+
+            if let Some(paygo_sub) = paygo {
+                // 显示 PAYGO 剩余额度（蓝色）
+                let paygo_color = "\x1b[38;5;39m"; // 蓝色
+                return Some(SegmentData {
+                    primary: format!(
+                        "{}PAYGO{} ${:.2}",
+                        paygo_color, RESET, paygo_sub.current_credits
+                    ),
+                    secondary: String::new(),
+                    metadata,
+                });
+            }
+        }
+    }
+
     // 检查额度是否用完（包括超额使用）
     if usage.is_exhausted() {
         // 实时获取订阅信息，传入 model 以获取正确的套餐

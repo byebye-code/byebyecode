@@ -42,10 +42,22 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         .unwrap_or_else(|| "https://www.88code.ai/api/usage".to_string());
 
     // 根据 usage_url 判断是哪个服务，并设置动态图标
-    let service_name = if usage_url.contains("packyapi.com") {
+    let service_name = if usage_url.contains("88code.org")
+        || usage_url.contains("88code.ai")
+        || usage_url.contains("rainapp.top")
+    {
+        "88code"
+    } else if usage_url.contains("packyapi.com") {
         "packy"
     } else {
-        "88code"
+        // 其他中转站不支持额度显示，因为 API 返回的数据格式不正确
+        let mut metadata = HashMap::new();
+        metadata.insert("dynamic_icon".to_string(), "88code".to_string());
+        return Some(SegmentData {
+            primary: "未配置订阅".to_string(),
+            secondary: String::new(),
+            metadata,
+        });
     };
 
     // Try to get API key from segment options first, then from Claude settings
@@ -147,6 +159,61 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         let subscriptions = fetch_subscriptions_sync(&api_key, &subscription_url, Some(model_id));
 
         if let Some(subs) = subscriptions {
+            // 仅 88code 服务支持 PAYGO 回退逻辑
+            if service_name == "88code" {
+                // 查找有余额的 PAYGO 套餐（按顺序取第一个）
+                let paygo = subs
+                    .iter()
+                    .filter(|s| s.is_active)
+                    .filter(|s| s.plan_name.to_uppercase() == "PAYGO")
+                    .find(|s| s.current_credits > 0.0);
+
+                if let Some(paygo_sub) = paygo {
+                    // 显示 PAYGO 剩余额度（蓝色）
+                    let paygo_color = "\x1b[38;5;39m"; // 蓝色
+
+                    // 如果有总额度信息，显示进度条
+                    if paygo_sub.credit_limit > 0.0 {
+                        let used = paygo_sub.credit_limit - paygo_sub.current_credits;
+                        let percentage = (used / paygo_sub.credit_limit * 100.0).clamp(0.0, 100.0);
+
+                        // 生成进度条（10格）
+                        let bar_length = 10;
+                        let filled = ((percentage / 100.0) * bar_length as f64).round() as usize;
+                        let empty = bar_length - filled;
+
+                        // PAYGO 使用蓝色进度条
+                        let progress_bar = format!(
+                            "{}{}{}{}",
+                            paygo_color,
+                            "▓".repeat(filled),
+                            "░".repeat(empty),
+                            RESET
+                        );
+
+                        return Some(SegmentData {
+                            primary: format!(
+                                "{}PAYGO{} ${:.2}/${:.0} {}",
+                                paygo_color, RESET, used, paygo_sub.credit_limit, progress_bar
+                            ),
+                            secondary: String::new(),
+                            metadata,
+                        });
+                    }
+
+                    // 无总额度信息，只显示剩余额度
+                    return Some(SegmentData {
+                        primary: format!(
+                            "{}PAYGO{} ${:.2}",
+                            paygo_color, RESET, paygo_sub.current_credits
+                        ),
+                        secondary: String::new(),
+                        metadata,
+                    });
+                }
+            }
+
+            // 非 88code 或无 PAYGO 可用，使用原有逻辑
             let active_subs: Vec<_> = subs.iter().filter(|s| s.is_active).collect();
 
             if active_subs.len() > 1 {
@@ -215,11 +282,24 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     })
 }
 
+/// 带缓存的订阅数据获取
+/// 1. 先尝试使用缓存（5分钟有效期）
+/// 2. 缓存过期或不存在时调用 API
+/// 3. API 成功后更新缓存
 fn fetch_subscriptions_sync(
     api_key: &str,
     subscription_url: &str,
     model: Option<&str>,
 ) -> Option<Vec<crate::api::SubscriptionData>> {
+    // 先检查缓存
+    let (cached, needs_refresh) = cache::get_cached_subscriptions();
+
+    // 缓存新鲜且存在，直接返回
+    if cached.is_some() && !needs_refresh {
+        return cached;
+    }
+
+    // 缓存过期或不存在，调用 API
     let api_config = ApiConfig {
         enabled: true,
         api_key: api_key.to_string(),
@@ -227,7 +307,14 @@ fn fetch_subscriptions_sync(
         subscription_url: subscription_url.to_string(),
     };
 
-    let client = ApiClient::new(api_config).ok()?;
-    let subs = client.get_subscriptions(model).ok()?;
-    Some(subs)
+    if let Ok(client) = ApiClient::new(api_config) {
+        if let Ok(subs) = client.get_subscriptions(model) {
+            // 保存到缓存
+            let _ = cache::save_cached_subscriptions(&subs);
+            return Some(subs);
+        }
+    }
+
+    // API 失败，返回过期缓存（降级处理）
+    cached
 }

@@ -33,8 +33,28 @@ impl Default for ApiConfig {
 }
 
 impl ApiConfig {
-    pub fn is_packyapi(&self) -> bool {
+    /// 判断是否是 88code 系列中转站
+    /// 88code 使用特定的 API 格式（POST + ResponseDTO 包装）
+    pub fn is_88code(&self) -> bool {
+        self.usage_url.contains("88code.org")
+            || self.usage_url.contains("88code.ai")
+            || self.usage_url.contains("rainapp.top")
+    }
+
+    /// 判断是否是 Packy 中转站
+    pub fn is_packy(&self) -> bool {
         self.usage_url.contains("packyapi.com")
+    }
+
+    /// 获取服务名称（用于状态栏显示）
+    pub fn get_service_name(&self) -> &'static str {
+        if self.is_88code() {
+            "88code"
+        } else if self.is_packy() {
+            "packy"
+        } else {
+            "relay" // 其他中转站统一显示为 relay
+        }
     }
 }
 
@@ -91,9 +111,9 @@ pub struct PackyUsageData {
     pub expires_at: i64,
     pub name: String,
     pub object: String,
-    pub total_available: u64,
-    pub total_granted: u64,
-    pub total_used: u64,
+    pub total_available: i64, // 改为 i64，支持负数（超额使用）
+    pub total_granted: i64,
+    pub total_used: i64,
     pub unlimited_quota: bool,
 
     #[serde(default)]
@@ -193,12 +213,9 @@ impl PackyUsageData {
         // Packy API 返回的字段含义：
         // - total_granted: 套餐总额度（积分）
         // - total_used: 已使用额度（积分）
-        // - total_available: 剩余可用额度（积分）= total_granted - total_used
+        // - total_available: 剩余可用额度（积分），可能为负数（超额使用）
         //
         // 单位转换：Packy 使用 500000 积分 = 1 美元（从用户实际数据推算）
-        // 用户实际：$0.52 余额 + $0.48 已用 = $1.00 总额
-        // API 返回：260425 + 239575 = 500000
-        // 所以：500000 积分 = $1.00，转换因子 = 500000
 
         const PACKY_CONVERSION_FACTOR: f64 = 500000.0; // 500000 积分 = 1 美元
 
@@ -208,19 +225,21 @@ impl PackyUsageData {
         let total_dollars = self.total_granted as f64 / PACKY_CONVERSION_FACTOR;
 
         // 转换为 cents（与 88code 统一，因为显示层会除以 100）
-        self.used_tokens = (used_dollars * 100.0) as u64;
-        self.remaining_tokens = (remaining_dollars * 100.0) as u64;
+        // 处理负数：used_tokens 和 remaining_tokens 是 u64，需要 clamp 到 0
+        self.used_tokens = (used_dollars * 100.0).max(0.0) as u64;
+        self.remaining_tokens = (remaining_dollars * 100.0).max(0.0) as u64;
 
         // 百分比基于 total_granted（套餐总额度）计算
+        // 超额使用时百分比可能超过 100%
         self.percentage_used = if self.total_granted > 0 {
-            (self.total_used as f64 / self.total_granted as f64 * 100.0).clamp(0.0, 100.0)
+            (self.total_used as f64 / self.total_granted as f64 * 100.0).max(0.0)
         } else {
             0.0
         };
 
         // 设置美元金额（用于 get_credit_limit 等方法）
-        self.credit_limit = total_dollars;
-        self.current_credits = remaining_dollars;
+        self.credit_limit = total_dollars.max(0.0);
+        self.current_credits = remaining_dollars; // 可以是负数，表示超额
     }
 
     pub fn is_exhausted(&self) -> bool {
@@ -245,6 +264,12 @@ pub struct SubscriptionData {
     pub reset_times: i32,
     #[serde(rename = "isActive")]
     pub is_active: bool,
+    /// 当前剩余额度（美元）- 用于 PAYGO 等套餐显示
+    #[serde(rename = "currentCredits", default)]
+    pub current_credits: f64,
+    /// 套餐总额度（美元）- 用于计算进度条
+    #[serde(rename = "creditLimit", default)]
+    pub credit_limit: f64,
 
     // 计算字段
     #[serde(skip)]
@@ -290,15 +315,10 @@ pub fn get_api_key_from_claude_settings() -> Option<String> {
 
     let env = settings.env?;
 
-    // Support 88code (both .org and .ai), packyapi.com, and rainapp.top (国内线路)
-    if let Some(base_url) = env.base_url {
-        if base_url.contains("88code.org")
-            || base_url.contains("88code.ai")
-            || base_url.contains("packyapi.com")
-            || base_url.contains("rainapp.top")
-        {
-            return env.auth_token;
-        }
+    // 只要配置了 ANTHROPIC_BASE_URL，就返回对应的 auth_token
+    // 支持所有中转站（88code、packy、以及其他第三方中转站）
+    if env.base_url.is_some() {
+        return env.auth_token;
     }
 
     None
@@ -320,12 +340,17 @@ pub fn get_usage_url_from_claude_settings() -> Option<String> {
     if base_url.contains("packyapi.com") {
         Some("https://www.packyapi.com/api/usage/token/".to_string())
     } else if base_url.contains("88code.ai") || base_url.contains("rainapp.top") {
-        // 新域名：88code.ai 和国内线路 rainapp.top
+        // 88code 新域名和国内线路
         Some("https://www.88code.ai/api/usage".to_string())
     } else if base_url.contains("88code.org") {
-        // 旧域名兼容
+        // 88code 旧域名兼容
         Some("https://www.88code.org/api/usage".to_string())
     } else {
-        None
+        // 其他中转站：基于 base_url 构造 usage URL
+        // 假设 API 路径为 /api/usage/token/（与 Packy 兼容）
+        let base = base_url.trim_end_matches('/');
+        // 移除可能存在的 /v1 或 /api 后缀
+        let base = base.trim_end_matches("/v1").trim_end_matches("/api");
+        Some(format!("{}/api/usage/token/", base))
     }
 }

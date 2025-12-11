@@ -262,6 +262,219 @@ pub fn get_subscriptions(&self, model: Option<&str>) -> Result<Vec<SubscriptionD
 }
 ```
 
+---
+
+## ✅ 已解决：Usage API 不返回 PAYGO 套餐（2025-12-11 修复）
+
+### 问题描述
+
+当用户同时拥有 PLUS 和 PAYGO 套餐，且 PLUS 额度用完后，状态栏应该显示 PAYGO 的额度，但实际显示的是 FREE 套餐的额度（$0/$20）。
+
+### 根本原因
+
+**Usage API 的 `subscriptionEntityList` 不返回 PAYGO 套餐数据！**
+
+#### Usage API（用量查询）
+
+**请求**：
+```bash
+curl -s "https://www.88code.ai/api/usage" -X POST \
+  -H "Authorization: Bearer 88_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"claude-opus-4-5-20250514"}'
+```
+
+**返回的 `subscriptionEntityList`**：
+```json
+[
+  {
+    "subscriptionName": "FREE",
+    "currentCredits": 20.0,
+    "creditLimit": 20.0,
+    "isActive": true
+  },
+  {
+    "subscriptionName": "PLUS",
+    "currentCredits": -0.0666407615,
+    "creditLimit": 50.0,
+    "isActive": true
+  }
+]
+```
+
+**⚠️ 没有返回 PAYGO！**
+
+#### Subscription API（订阅查询）
+
+**请求**：
+```bash
+curl -s "https://www.88code.ai/api/subscription" -X POST \
+  -H "Authorization: Bearer 88_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"claude-opus-4-5-20250514"}'
+```
+
+**返回**（摘要）：
+```json
+[
+  {"subscriptionPlanName": "FREE", "currentCredits": 20.0, "isActive": true, "remainingDays": 28},
+  {"subscriptionPlanName": "PLUS", "currentCredits": -0.07, "isActive": true, "remainingDays": 27},
+  {"subscriptionPlanName": "PLUS", "currentCredits": 50.0, "isActive": true, "remainingDays": 53},
+  {"subscriptionPlanName": "PAYGO", "currentCredits": 64.03, "isActive": true, "remainingDays": 988}
+]
+```
+
+**✅ Subscription API 返回了 PAYGO！**
+
+### 解决方案（已实现）
+
+采用 **方案 A：从 Subscription API 获取 PAYGO 额度**
+
+**实现逻辑**：
+```
+1. 调用 Usage API 获取 PLUS 等套餐数据
+2. 判断是否所有 PLUS 用完（currentCredits <= 0）
+3. 如果用完，调用 Subscription API
+4. 从订阅列表中找到有余额的 PAYGO 套餐
+5. 显示 "PAYGO $XX.XX"（蓝色，无进度条）
+```
+
+**关键代码** (`src/core/segments/byebyecode_usage.rs`):
+```rust
+if usage.is_exhausted() {
+    let subscriptions = fetch_subscriptions_sync(&api_key, &subscription_url, Some(model_id));
+
+    if let Some(subs) = subscriptions {
+        // 仅 88code 服务支持 PAYGO 回退
+        if service_name == "88code" {
+            let paygo = subs.iter()
+                .filter(|s| s.is_active)
+                .filter(|s| s.plan_name.to_uppercase() == "PAYGO")
+                .find(|s| s.current_credits > 0.0);
+
+            if let Some(paygo_sub) = paygo {
+                // 显示 PAYGO 剩余额度（蓝色）
+                return Some(SegmentData {
+                    primary: format!("PAYGO ${:.2}", paygo_sub.current_credits),
+                    ...
+                });
+            }
+        }
+    }
+}
+```
+
+**性能优化**：
+- 订阅数据使用 5 分钟缓存，避免频繁 API 调用
+- API 失败时降级到过期缓存
+
+### 状态
+
+✅ **已解决**（2025-12-11）
+
+**限制**：PAYGO 无法显示进度条，因为 Subscription API 不返回 `creditLimit`（总额度）字段。
+
+---
+
+## 🚨 待解决：Privnode API 返回数据无法正确显示账户余额（2025-12-11）
+
+### 问题描述
+
+使用 Privnode 中转站时，状态栏显示 `relay $10.92/$1`，与实际账户数据不符：
+- **实际当前余额**：$14.01
+- **实际历史消耗**：$11.01
+- **状态栏显示**：`$10.92/$1`（已用/总额）
+
+### API 返回数据分析
+
+**请求**：
+```bash
+curl -s "https://privnode.com/api/usage/token/" \
+  -H "Authorization: Bearer sk-xxx"
+```
+
+**返回**：
+```json
+{
+  "code": true,
+  "data": {
+    "expires_at": 0,
+    "model_limits": {},
+    "model_limits_enabled": false,
+    "name": "251113",
+    "object": "token_usage",
+    "total_available": -5007103,
+    "total_granted": 500000,
+    "total_used": 5507103,
+    "unlimited_quota": true
+  },
+  "message": "ok"
+}
+```
+
+### 字段分析
+
+| 字段 | 值 | 转换后（÷500000） | 含义 |
+|------|-----|------------------|------|
+| `total_used` | 5507103 | **$11.01** | 历史消耗 ✓ 正确 |
+| `total_granted` | 500000 | **$1.00** | 初始赠送额度（不是账户总额） |
+| `total_available` | -5007103 | **-$10.01** | 负数，计算值（granted - used） |
+| `unlimited_quota` | true | - | 无限额度账户 |
+
+### 问题根因
+
+1. **`total_granted` 只返回初始赠送额度（$1）**，不是用户充值后的账户总额度
+2. **缺少"当前账户余额"字段**：用户实际余额 $14.01 不在 API 返回中
+3. **`total_available` 计算方式有问题**：`granted - used = $1 - $11.01 = -$10.01`，对于充值账户无意义
+4. **`unlimited_quota: true` 时**：`total_granted` 和 `total_available` 无法反映真实账户状态
+
+### 期望的 API 返回
+
+为了正确显示账户余额，建议 API 返回以下字段：
+
+```json
+{
+  "data": {
+    "total_used": 5507103,        // 历史消耗（保持不变）
+    "total_balance": 7005000,     // 当前账户余额：$14.01 × 500000
+    "total_granted": 12512103,    // 账户总额度（充值+赠送）：余额+已用
+    "total_available": 7005000,   // 可用额度 = 当前余额
+    "unlimited_quota": true
+  }
+}
+```
+
+或者添加新字段：
+
+```json
+{
+  "data": {
+    "account_balance": 7005000,   // 新增：账户余额（$14.01 × 500000）
+    "total_used": 5507103,
+    "total_granted": 500000,      // 可以保持为初始赠送
+    "unlimited_quota": true
+  }
+}
+```
+
+### 影响范围
+
+- byebyecode 状态栏无法正确显示 Privnode 用户的账户余额
+- 进度条显示异常（已用 $11 / 总额 $1 = 1100%）
+- 用户无法通过状态栏了解真实的账户状态
+
+### 临时解决方案
+
+在 Privnode 修复 API 之前，byebyecode 可以：
+1. 当 `unlimited_quota: true` 且 `total_available < 0` 时，只显示已用金额
+2. 不显示误导性的总额度和进度条
+
+### 状态
+
+🔴 **待 Privnode 修复** - 需要 API 返回正确的账户余额字段
+
+---
+
 ## 已完成的功能
 
 ### Issue #9 修复 (PR #10, #12)

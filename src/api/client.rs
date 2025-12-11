@@ -18,16 +18,12 @@ impl ApiClient {
     }
 
     pub fn get_usage(&self, model: Option<&str>) -> Result<UsageData, Box<dyn std::error::Error>> {
-        let is_packyapi = self.config.is_packyapi();
+        // 88code 使用特定的 API 格式（POST + ResponseDTO）
+        // 其他中转站（Packy 及其他）使用通用格式（GET + 直接响应）
+        let is_88code = self.config.is_88code();
 
-        let response = if is_packyapi {
-            self.client
-                .get(&self.config.usage_url)
-                .header("Authorization", format!("Bearer {}", self.config.api_key))
-                .send()?
-        } else {
-            // 构建请求体，传入 model 参数以获取正确套餐的用量
-            // 如果不传 model，API 会默认返回 free 套餐的用量
+        let response = if is_88code {
+            // 88code 系列：POST 请求，传入 model 参数
             let body = match model {
                 Some(m) => serde_json::json!({ "model": m }),
                 None => serde_json::json!({}),
@@ -38,6 +34,12 @@ impl ApiClient {
                 .header("Content-Type", "application/json")
                 .json(&body)
                 .send()?
+        } else {
+            // Packy 及其他中转站：GET 请求
+            self.client
+                .get(&self.config.usage_url)
+                .header("Authorization", format!("Bearer {}", self.config.api_key))
+                .send()?
         };
 
         if !response.status().is_success() {
@@ -46,22 +48,26 @@ impl ApiClient {
 
         let response_text = response.text()?;
 
-        let mut usage: UsageData = if is_packyapi {
+        let mut usage: UsageData = if is_88code {
+            // 88code：解析 ResponseDTO 包装的响应
+            let resp: super::ResponseDTO<super::Code88UsageData> =
+                serde_json::from_str(&response_text).map_err(|e| {
+                    format!(
+                        "88code JSON parse error: {} | Response: {}",
+                        e, response_text
+                    )
+                })?;
+            UsageData::Code88(resp.data)
+        } else {
+            // Packy 及其他中转站：使用 Packy 格式解析
             let resp: super::PackyUsageResponse =
                 serde_json::from_str(&response_text).map_err(|e| {
                     format!(
-                        "Packyapi JSON parse error: {} | Response: {}",
+                        "Relay JSON parse error: {} | Response: {}",
                         e, response_text
                     )
                 })?;
             UsageData::Packy(resp.data)
-        } else {
-            // 解析 ResponseDTO 包装的响应
-            let resp: super::ResponseDTO<super::Code88UsageData> =
-                serde_json::from_str(&response_text).map_err(|e| {
-                    format!("API JSON parse error: {} | Response: {}", e, response_text)
-                })?;
-            UsageData::Code88(resp.data)
         };
 
         usage.calculate();

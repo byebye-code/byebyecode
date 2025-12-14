@@ -135,13 +135,21 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         // 语义化颜色
         let color = get_plan_color(&sub.plan_name);
 
-        // 精简格式：PLUS ¥198/月 53天
-        // 去掉重置次数，只保留套餐名、价格、剩余天数
+        // 精简格式：PLUS ¥198/月 重置×2 53天
+        // 只有 PAYGO 不显示重置次数，其他套餐（包括 FREE）都显示（如果有）
         let short_price = sub.plan_price.replace("付", "");
-        let subscription_text = format!(
-            "{}{} {} {}天{}",
-            color, sub.plan_name, short_price, sub.remaining_days, RESET
-        );
+        let plan_upper = sub.plan_name.to_uppercase();
+        let subscription_text = if plan_upper != "PAYGO" && sub.reset_times > 0 {
+            format!(
+                "{}{} {} 重置×{} {}天{}",
+                color, sub.plan_name, short_price, sub.reset_times, sub.remaining_days, RESET
+            )
+        } else {
+            format!(
+                "{}{} {} {}天{}",
+                color, sub.plan_name, short_price, sub.remaining_days, RESET
+            )
+        };
         subscription_texts.push(subscription_text);
 
         // 保存元数据

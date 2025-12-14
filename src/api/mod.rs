@@ -361,12 +361,9 @@ pub fn get_usage_url_from_claude_settings() -> Option<String> {
 
     if base_url.contains("packyapi.com") {
         Some("https://www.packyapi.com/api/usage/token/".to_string())
-    } else if base_url.contains("88code.ai") || base_url.contains("rainapp.top") {
-        // 88code 新域名和国内线路
+    } else if base_url.contains("88code") {
+        // 88code 中转站：只要 URL 包含 "88code" 就识别
         Some("https://www.88code.ai/api/usage".to_string())
-    } else if base_url.contains("88code.org") {
-        // 88code 旧域名兼容
-        Some("https://www.88code.org/api/usage".to_string())
     } else {
         // 其他中转站：基于 base_url 构造 usage URL
         // 假设 API 路径为 /api/usage/token/（与 Packy 兼容）

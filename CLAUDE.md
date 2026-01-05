@@ -30,6 +30,7 @@ ByeByeCode 是一个 Rust 编写的 Claude Code 状态栏增强工具，用于�
 | `feature/simplify-subscription-display` | 精简订阅显示格式 | PR #15 | ✅ 已合并 |
 | `feature/support-new-88code-domains` | 支持新域名 88code.ai | PR #16 | ✅ 已合并 |
 | `feature/sort-subscriptions-by-remaining-days` | 按剩余天数排序 | PR #18 | ✅ 已合并 |
+| `fix/issue-26-usage-api-fallback` | Usage API 返回 null 时 fallback | PR #27 | ✅ 已合并 |
 
 ### 分支工作流
 
@@ -376,6 +377,85 @@ if usage.is_exhausted() {
 
 ---
 
+## ✅ 已解决：Usage API 返回 null 值导致状态栏无法显示（2026-01-05 修复）
+
+### 问题描述（Issue #26）
+
+88code 的 `/api/usage` 接口返回的 `creditLimit`、`currentCredits`、`subscriptionEntityList` 字段全是 `null`，导致状态栏无法正确显示用量。
+
+**API 返回示例**：
+```json
+{
+  "code": 0,
+  "data": {
+    "creditLimit": null,
+    "currentCredits": null,
+    "subscriptionEntityList": null,
+    "totalCost": 296.295528,
+    "totalTokens": 216080709
+  }
+}
+```
+
+### 根本原因
+
+88code 的 Usage API 不再返回用量相关字段，只返回基础的 key 统计信息。但 `/api/subscription` 接口仍然能正常返回订阅数据。
+
+### 解决方案（双重保障策略）
+
+采用 **优先原接口，失败时 fallback** 的方案：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Step 1: 调用 /api/usage                                    │
+│  ↓                                                          │
+│  检查关键字段是否有效 (is_valid())：                         │
+│  ├─ creditLimit > 0                                         │
+│  └─ subscriptionEntityList 非空                             │
+│                                                             │
+│  ✅ 有效 → 使用原方案逻辑（代码不变）                         │
+│  ❌ 无效 → fallback 到 Step 2                               │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Step 2: Fallback - 调用 /api/subscription                  │
+│  ↓                                                          │
+│  from_subscriptions() 构造等价的 UsageData                   │
+│  ├─ 筛选活跃套餐 (is_active && status == "活跃中")           │
+│  ├─ 按扣费优先级排序 (PLUS > PAYGO > FREE)                  │
+│  └─ 跳过 FREE，找第一个有消费的套餐                          │
+│  ↓                                                          │
+│  正常显示进度条 ✅                                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 代码修改
+
+1. **`src/api/mod.rs`**：
+   - 添加自定义反序列化函数 `deserialize_null_as_zero` 和 `deserialize_null_as_empty_vec` 处理 null 值
+   - 新增 `is_valid()` 方法判断 usage 数据是否有效
+   - 新增 `SubscriptionPlan` 结构体解析嵌套的 `creditLimit`
+   - 新增 `from_subscriptions()` 方法从订阅数据构造等价的 UsageData
+
+2. **`src/api/client.rs`**：
+   - 在 `get_usage()` 中加入 fallback 逻辑
+
+3. **`src/core/segments/byebyecode_usage.rs`**：
+   - 修复 `fetch_usage_with_cache()` 传入正确的 `subscription_url`
+
+### 优势
+
+- **向后兼容**：88code 修复接口后自动恢复原方案
+- **当前可用**：接口没修复时 subscription 方案兜底
+- **最小改动**：原方案代码基本不动，只加判断层
+- **风险隔离**：新方案只在原方案失败时才启用
+
+### 状态
+
+✅ **已解决**（2026-01-05，PR #27）
+
+---
+
 ## 🚨 待解决：Privnode API 返回数据无法正确显示账户余额（2025-12-11）
 
 ### 问题描述
@@ -528,6 +608,7 @@ let progress_bar = format!("{}{}", "▓".repeat(filled), "░".repeat(empty));
 | #10 | ✅ 已合并 | 修复状态栏错误显示 Free 套餐用量的问题 |
 | #11 | ✅ 已合并 | 用进度条可视化用量显示 |
 | #12 | ✅ 已合并 | Claude Code 环境下跳过 FREE 套餐 |
+| #27 | ✅ 已合并 | 修复 Issue #26：Usage API 返回 null 时 fallback 到 Subscription API |
 
 ## 常见问题
 

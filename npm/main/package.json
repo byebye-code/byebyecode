@@ -1,6 +1,6 @@
 {
   "name": "@88code/byebyecode",
-  "version": "0.1.0",
+  "version": "1.1.26",
   "description": "CCometixLine - High-performance Claude Code StatusLine tool",
   "bin": {
     "byebyecode": "bin/byebyecode.js"
@@ -9,11 +9,11 @@
     "postinstall": "node scripts/postinstall.js"
   },
   "optionalDependencies": {
-    "@88code/byebyecode-darwin-x64": "0.1.0",
-    "@88code/byebyecode-darwin-arm64": "0.1.0",
-    "@88code/byebyecode-linux-x64": "0.1.0",
-    "@88code/byebyecode-linux-x64-musl": "0.1.0",
-    "@88code/byebyecode-win32-x64": "0.1.0"
+    "@88code/byebyecode-darwin-x64": "1.1.26",
+    "@88code/byebyecode-darwin-arm64": "1.1.26",
+    "@88code/byebyecode-linux-x64": "1.1.26",
+    "@88code/byebyecode-linux-x64-musl": "1.1.26",
+    "@88code/byebyecode-win32-x64": "1.1.26"
   },
   "repository": {
     "type": "git",

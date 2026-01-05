@@ -1,6 +1,6 @@
 {
   "name": "@88code/byebyecode-darwin-arm64",
-  "version": "0.1.0",
+  "version": "1.1.26",
   "description": "macOS ARM64 binary for CCometixLine",
   "files": ["byebyecode"],
   "os": ["darwin"],

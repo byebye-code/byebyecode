@@ -57,7 +57,26 @@ impl ApiClient {
                         e, response_text
                     )
                 })?;
-            UsageData::Code88(resp.data)
+            let data = resp.data;
+
+            // 检查 usage API 数据是否有效
+            // 如果无效（creditLimit=null, subscriptionEntityList=null），fallback 到 subscription API
+            if !data.is_valid() {
+                // Fallback: 从 subscription API 获取数据
+                match self.get_subscriptions(model) {
+                    Ok(subscriptions) => {
+                        let fallback_data =
+                            super::Code88UsageData::from_subscriptions(&subscriptions);
+                        UsageData::Code88(fallback_data)
+                    }
+                    Err(_) => {
+                        // subscription API 也失败了，返回原始数据（可能显示异常）
+                        UsageData::Code88(data)
+                    }
+                }
+            } else {
+                UsageData::Code88(data)
+            }
         } else {
             // Packy 及其他中转站：使用 Packy 格式解析
             let resp: super::PackyUsageResponse =

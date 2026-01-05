@@ -1,8 +1,28 @@
 pub mod cache;
 pub mod client;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::path::PathBuf;
+
+/// 自定义反序列化：将 null 转换为默认值 0.0
+fn deserialize_null_as_zero<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt = Option::<f64>::deserialize(deserializer)?;
+    Ok(opt.unwrap_or(0.0))
+}
+
+/// 自定义反序列化：将 null 转换为空 Vec
+fn deserialize_null_as_empty_vec<'de, D>(
+    deserializer: D,
+) -> Result<Vec<SubscriptionEntity>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt = Option::<Vec<SubscriptionEntity>>::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiConfig {
@@ -67,15 +87,27 @@ pub enum UsageData {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Code88UsageData {
-    #[serde(rename = "totalTokens")]
+    #[serde(rename = "totalTokens", default)]
     pub total_tokens: u64,
-    #[serde(rename = "creditLimit")]
+    #[serde(
+        rename = "creditLimit",
+        default,
+        deserialize_with = "deserialize_null_as_zero"
+    )]
     pub credit_limit: f64,
-    #[serde(rename = "currentCredits")]
+    #[serde(
+        rename = "currentCredits",
+        default,
+        deserialize_with = "deserialize_null_as_zero"
+    )]
     pub current_credits: f64,
 
     /// 订阅实体列表，包含所有套餐的详细信息
-    #[serde(rename = "subscriptionEntityList", default)]
+    #[serde(
+        rename = "subscriptionEntityList",
+        default,
+        deserialize_with = "deserialize_null_as_empty_vec"
+    )]
     pub subscription_entity_list: Vec<SubscriptionEntity>,
 
     #[serde(default)]
@@ -171,9 +203,25 @@ impl UsageData {
             UsageData::Packy(_) => false, // Packy 不支持
         }
     }
+
+    /// 判断 usage 数据是否有效（用于检测 API 是否返回了有效数据）
+    /// 如果无效，需要 fallback 到 subscription API
+    pub fn is_valid(&self) -> bool {
+        match self {
+            UsageData::Code88(data) => data.is_valid(),
+            UsageData::Packy(_) => true, // Packy 格式不受影响
+        }
+    }
 }
 
 impl Code88UsageData {
+    /// 判断 usage API 返回的数据是否有效
+    /// 当 API 返回 creditLimit=null, subscriptionEntityList=null 时为无效
+    pub fn is_valid(&self) -> bool {
+        // 有效条件：creditLimit > 0 或 subscriptionEntityList 非空
+        self.credit_limit > 0.0 || !self.subscription_entity_list.is_empty()
+    }
+
     pub fn calculate(&mut self) {
         // 从 subscriptionEntityList 中找到正在扣费的套餐
         // Claude Code 环境下跳过 FREE 套餐（FREE 不支持 CC）
@@ -269,6 +317,15 @@ impl PackyUsageData {
     }
 }
 
+/// 套餐计划详情（嵌套在 SubscriptionData 中）
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct SubscriptionPlan {
+    #[serde(rename = "creditLimit", default)]
+    pub credit_limit: f64,
+    #[serde(rename = "subscriptionName", default)]
+    pub subscription_name: String,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SubscriptionData {
     #[serde(rename = "subscriptionPlanName")]
@@ -289,9 +346,15 @@ pub struct SubscriptionData {
     /// 当前剩余额度（美元）- 用于 PAYGO 等套餐显示
     #[serde(rename = "currentCredits", default)]
     pub current_credits: f64,
-    /// 套餐总额度（美元）- 用于计算进度条
+    /// 套餐总额度（美元）- 顶层可能没有，需要从 subscription_plan 获取
     #[serde(rename = "creditLimit", default)]
     pub credit_limit: f64,
+    /// 套餐计划详情 - 包含 creditLimit 等信息
+    #[serde(rename = "subscriptionPlan", default)]
+    pub subscription_plan: SubscriptionPlan,
+    /// 订阅 ID - 用于排序（越小越早购买）
+    #[serde(default)]
+    pub id: i64,
 
     // 计算字段
     #[serde(skip)]
@@ -299,9 +362,89 @@ pub struct SubscriptionData {
 }
 
 impl SubscriptionData {
-    /// 格式化显示数据
+    /// 格式化显示数据，并从 subscription_plan 补充 credit_limit
     pub fn format(&mut self) {
         self.plan_price = format!("¥{}/{}", self.cost, self.billing_cycle_desc);
+        // 如果顶层 credit_limit 为 0，从 subscription_plan 获取
+        if self.credit_limit == 0.0 && self.subscription_plan.credit_limit > 0.0 {
+            self.credit_limit = self.subscription_plan.credit_limit;
+        }
+    }
+
+    /// 获取扣费优先级（用于排序）
+    /// PLUS/PRO/MAX = 1, PAYGO = 2, FREE = 3
+    fn billing_priority(&self) -> u8 {
+        match self.plan_name.to_uppercase().as_str() {
+            "FREE" => 3,
+            "PAYGO" => 2,
+            _ => 1, // PLUS, PRO, MAX 等
+        }
+    }
+}
+
+impl Code88UsageData {
+    /// 从 subscription 数据构造 UsageData（fallback 方案）
+    /// 当 /api/usage 返回无效数据时使用
+    pub fn from_subscriptions(subscriptions: &[SubscriptionData]) -> Self {
+        // 筛选活跃套餐：is_active && status == "活跃中"
+        let mut active_subs: Vec<&SubscriptionData> = subscriptions
+            .iter()
+            .filter(|s| s.is_active)
+            .filter(|s| s.status == "活跃中")
+            .collect();
+
+        // 按扣费优先级排序：PLUS/PRO/MAX > PAYGO > FREE
+        // 同优先级按 id 排序（越小越早购买）
+        active_subs.sort_by(|a, b| {
+            a.billing_priority()
+                .cmp(&b.billing_priority())
+                .then(a.id.cmp(&b.id))
+        });
+
+        // 跳过 FREE，找第一个有消费的（current_credits < credit_limit）
+        let current_sub = active_subs
+            .iter()
+            .filter(|s| s.plan_name.to_uppercase() != "FREE")
+            .find(|s| s.current_credits < s.credit_limit);
+
+        // 如果没找到有消费的，取第一个非 FREE 有余额的（fallback）
+        let current_sub = current_sub.or_else(|| {
+            active_subs
+                .iter()
+                .filter(|s| s.plan_name.to_uppercase() != "FREE")
+                .find(|s| s.current_credits > 0.0)
+        });
+
+        // 构造 subscription_entity_list
+        let subscription_entity_list: Vec<SubscriptionEntity> = active_subs
+            .iter()
+            .map(|s| SubscriptionEntity {
+                subscription_name: s.plan_name.clone(),
+                credit_limit: s.credit_limit,
+                current_credits: s.current_credits,
+                is_active: s.is_active,
+            })
+            .collect();
+
+        // 获取当前套餐的数据
+        let (credit_limit, current_credits) = match current_sub {
+            Some(sub) => (sub.credit_limit, sub.current_credits),
+            None => (0.0, 0.0),
+        };
+
+        let mut data = Code88UsageData {
+            total_tokens: 0,
+            credit_limit,
+            current_credits,
+            subscription_entity_list,
+            used_tokens: 0,
+            remaining_tokens: 0,
+            percentage_used: 0.0,
+        };
+
+        // 计算 used_tokens, remaining_tokens, percentage_used
+        data.calculate();
+        data
     }
 }
 

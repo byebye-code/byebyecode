@@ -93,7 +93,13 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     let model_id = &input.model.id;
 
     // 优先使用缓存，API 失败时降级
-    let usage = fetch_usage_with_cache(&api_key, &usage_url, Some(model_id), service_name);
+    let usage = fetch_usage_with_cache(
+        &api_key,
+        &usage_url,
+        &subscription_url,
+        Some(model_id),
+        service_name,
+    );
 
     let usage = match usage {
         Some(u) => u,
@@ -116,6 +122,7 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
     fn fetch_usage_with_cache(
         api_key: &str,
         usage_url: &str,
+        subscription_url: &str,
         model: Option<&str>,
         _service_name: &str,
     ) -> Option<crate::api::UsageData> {
@@ -123,7 +130,7 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
             enabled: true,
             api_key: api_key.to_string(),
             usage_url: usage_url.to_string(),
-            subscription_url: String::new(),
+            subscription_url: subscription_url.to_string(),
         };
 
         // 尝试从 API 获取

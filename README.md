@@ -56,7 +56,12 @@ npm install -g @88code/byebyecode --registry=https://registry.npmmirror.com
 - **稳定补丁器** 适应 Claude Code 版本更新
 - **自动备份** 安全修改，支持轻松恢复
 
-### 🆕 最近更新 (v1.1.1)
+### 🆕 最近更新 (v1.1.25)
+
+#### Usage API Fallback 机制（2026-01-05）
+- **自动 Fallback** - 当 `/api/usage` 返回无效数据时，自动切换到 `/api/subscription` 获取用量
+- **向后兼容** - 88code 修复接口后自动恢复原方案
+- **双重保障** - 确保状态栏在任何情况下都能正常显示用量信息
 
 #### 88Code API 集成
 - **自动检测 API key** - 自动从 `~/.claude/settings.json` 读取

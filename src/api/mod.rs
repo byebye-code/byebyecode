@@ -56,8 +56,7 @@ impl ApiConfig {
     /// 判断是否是 88code 系列中转站
     /// 88code 使用特定的 API 格式（POST + ResponseDTO 包装）
     pub fn is_88code(&self) -> bool {
-        self.usage_url.contains("88code.org")
-            || self.usage_url.contains("88code.ai")
+        self.usage_url.contains("88code")
             || self.usage_url.contains("rainapp.top")
     }
 
@@ -506,7 +505,19 @@ pub fn get_usage_url_from_claude_settings() -> Option<String> {
         Some("https://www.packyapi.com/api/usage/token/".to_string())
     } else if base_url.contains("88code") {
         // 88code 中转站：只要 URL 包含 "88code" 就识别
-        Some("https://www.88code.ai/api/usage".to_string())
+        // 保持原域名，因为不同的 88code 镜像站可能有不同的域名
+        let base = base_url.trim_end_matches('/');
+        // 如果已经以 /api 结尾，直接加 /usage
+        // 如果以 /v1 结尾，替换为 /api/usage
+        if base.ends_with("/api") {
+            Some(format!("{}/usage", base))
+        } else if base.ends_with("/v1") {
+            let base = base.trim_end_matches("/v1");
+            Some(format!("{}/api/usage", base))
+        } else {
+            // 没有后缀，添加 /api/usage
+            Some(format!("{}/api/usage", base))
+        }
     } else {
         // 其他中转站：基于 base_url 构造 usage URL
         // 假设 API 路径为 /api/usage/token/（与 Packy 兼容）

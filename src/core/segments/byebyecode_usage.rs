@@ -42,9 +42,7 @@ pub fn collect(config: &Config, input: &InputData) -> Option<SegmentData> {
         .unwrap_or_else(|| "https://www.88code.ai/api/usage".to_string());
 
     // 根据 usage_url 判断是哪个服务，并设置动态图标
-    let service_name = if usage_url.contains("88code")
-        || usage_url.contains("rainapp.top")
-    {
+    let service_name = if usage_url.contains("88code") || usage_url.contains("rainapp.top") {
         "88code"
     } else if usage_url.contains("packyapi.com") {
         "packy"

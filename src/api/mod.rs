@@ -56,8 +56,7 @@ impl ApiConfig {
     /// 判断是否是 88code 系列中转站
     /// 88code 使用特定的 API 格式（POST + ResponseDTO 包装）
     pub fn is_88code(&self) -> bool {
-        self.usage_url.contains("88code")
-            || self.usage_url.contains("rainapp.top")
+        self.usage_url.contains("88code") || self.usage_url.contains("rainapp.top")
     }
 
     /// 判断是否是 Packy 中转站
